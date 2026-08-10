@@ -1,0 +1,33 @@
+{
+  "name": "ecgo-ops-dashboard-prod",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "@babel/parser": "7.29.8",
+    "@vue/compiler-core": "3.5.41",
+    "@vue/compiler-dom": "3.5.41",
+    "@vue/compiler-ssr": "3.5.41",
+    "@vue/devtools-api": "6.6.4",
+    "@vue/reactivity": "3.5.41",
+    "@vue/runtime-core": "3.5.41",
+    "@vue/runtime-dom": "3.5.41",
+    "@vue/server-renderer": "3.5.41",
+    "@vue/shared": "3.5.41",
+    "devalue": "5.9.0",
+    "entities": "7.0.1",
+    "estree-walker": "2.0.2",
+    "fnv1a-64": "0.1.2",
+    "hookable": "6.1.1",
+    "nostics": "1.2.0",
+    "object-identity": "0.2.3",
+    "postgres": "3.4.9",
+    "source-map-js": "1.2.1",
+    "ufo": "1.6.4",
+    "unhead": "3.3.1",
+    "vue": "3.5.41",
+    "vue-bundle-renderer": "2.3.2",
+    "vue-router": "4.6.4",
+    "zod": "4.4.3"
+  }
+}

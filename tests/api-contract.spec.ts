@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type {
-  CabinetDetailResponse,
-  CabinetListResponse,
-  ApiErrorBody,
-} from '../shared/contracts/cabinets'
+import type { CabinetDetailResponse, CabinetListResponse } from '../shared/contracts/cabinets'
+import type { ApiErrorBody } from '../shared/contracts/errors'
+import { BASE_URL, CREDENTIALS, getJson, login, serverIsUp } from './helpers'
 
 /**
  * Test kontrak API — dijalankan terhadap server dev yang sedang hidup.
@@ -20,22 +18,15 @@ import type {
  * pagination tidak pernah menampilkan baris yang sama dua kali.
  */
 
-const BASE_URL = process.env.TEST_BASE_URL ?? 'http://localhost:3000'
+const cookie = serverIsUp ? await login(CREDENTIALS.admin) : ''
 
-const serverIsUp = await fetch(`${BASE_URL}/api/health`, {
-  signal: AbortSignal.timeout(2_000),
-})
-  .then((r) => r.ok)
-  .catch(() => false)
-
-if (!serverIsUp) {
-  console.warn(`\n⏭  Test kontrak API dilewati — tidak ada server di ${BASE_URL}\n`)
-}
-
-const get = async <T>(path: string): Promise<{ status: number; body: T }> => {
-  const response = await fetch(`${BASE_URL}${path}`)
-  return { status: response.status, body: (await response.json()) as T }
-}
+/**
+ * Semua endpoint di bawah kini butuh sesi, jadi test kontrak masuk sebagai ADMIN
+ * — peran yang melihat seluruh armada, supaya yang diuji tetap bentuk kontraknya
+ * dan bukan efek penyempitan ruang lingkup. Perilaku ruang lingkup itu sendiri
+ * diuji terpisah di auth.spec.ts.
+ */
+const get = <T>(path: string) => getJson<T>(path, cookie)
 
 describe.skipIf(!serverIsUp)('GET /api/cabinets', () => {
   it('mengembalikan data dan meta pagination yang konsisten', async () => {

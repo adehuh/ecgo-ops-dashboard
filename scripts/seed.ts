@@ -23,6 +23,7 @@
  * benar, grafik per jam terlihat datar dan wajar, dan tidak ada satu pun cabang
  * kode "stale"/"belum pernah melapor" yang teruji.
  */
+import { hashPassword } from '../shared/auth/password'
 import { createClient, explainConnectionError } from './_client'
 
 // ---------------------------------------------------------------------------
@@ -93,6 +94,52 @@ const BRANCHES = [
   { code: 'DPK', name: 'Depok Margonda', city: 'Depok', lat: -6.3862, lng: 106.8318, radiusM: 200 },
   { code: 'TNG', name: 'Tangerang Alam Sutera', city: 'Tangerang', lat: -6.2261, lng: 106.6534, radiusM: 220 },
 ] as const
+
+/**
+ * Akun demo. Password sengaja ditulis terbuka di sini karena ini data seed untuk
+ * pengembangan lokal — dan tertulis jelas di README bahwa akun-akun ini tidak
+ * boleh ikut ke lingkungan mana pun selain laptop.
+ *
+ * Empat akun ini dipilih supaya seluruh cabang keputusan otorisasi punya wakil:
+ *   - ADMIN            : allowedBranchIds = null  → melihat semua
+ *   - dua SUPERVISOR   : ruang lingkup berbeda    → membuktikan pemisahannya nyata
+ *   - SUPERVISOR kosong: allowedBranchIds = []    → membuktikan gagalnya tertutup
+ *
+ * Yang terakhir itu yang paling penting. Akun tanpa cabang adalah keadaan yang
+ * pasti terjadi di produksi (karyawan baru dibuatkan akun sebelum ditugaskan),
+ * dan kalau array kosong disalahartikan sebagai "tanpa batas", akun itulah yang
+ * akan melihat seluruh armada.
+ */
+const USERS = [
+  {
+    email: 'admin@ecgo.test',
+    name: 'Admin Operasional',
+    password: 'ops-admin-2026',
+    role: 'ADMIN' as const,
+    branches: [] as string[],
+  },
+  {
+    email: 'kemayoran@ecgo.test',
+    name: 'Supervisor Kemayoran',
+    password: 'ops-kemayoran-2026',
+    role: 'SUPERVISOR' as const,
+    branches: ['KMY', 'SNT'],
+  },
+  {
+    email: 'bekasi@ecgo.test',
+    name: 'Supervisor Bekasi',
+    password: 'ops-bekasi-2026',
+    role: 'SUPERVISOR' as const,
+    branches: ['BKS', 'DPK', 'TNG'],
+  },
+  {
+    email: 'baru@ecgo.test',
+    name: 'Supervisor Baru (belum ditugaskan)',
+    password: 'ops-baru-2026',
+    role: 'SUPERVISOR' as const,
+    branches: [],
+  },
+]
 
 const CABINET_STATUSES = ['ONLINE', 'OFFLINE', 'MAINTENANCE'] as const
 type CabinetStatus = (typeof CABINET_STATUSES)[number]
@@ -389,7 +436,14 @@ async function main() {
     await sql.begin(async (tx) => {
       // Idempoten: satu-satunya cara `npm run seed` bisa dijalankan berkali-kali
       // tanpa menggandakan riwayat swap dan merusak agregat 24 jam.
-      await tx`TRUNCATE swap_transactions, slots, cabinets, branches RESTART IDENTITY CASCADE`
+      // users dan sessions ikut disebut eksplisit. CASCADE dari branches memang
+      // sudah mengosongkan user_branches, tapi itu akan meninggalkan pengguna
+      // tanpa satu pun cabang — yaitu setiap supervisor mendadak tidak bisa
+      // melihat apa-apa setelah seed ulang. Lebih baik dibangun ulang seluruhnya.
+      await tx`
+        TRUNCATE swap_transactions, slots, cabinets, branches, user_branches, sessions, users
+        RESTART IDENTITY CASCADE
+      `
 
       const branchRows = await tx<{ id: string }[]>`
         INSERT INTO branches ${tx(
@@ -413,6 +467,41 @@ async function main() {
         RETURNING id
       `
       const branchIds = branchRows.map((r) => Number(r.id))
+      const branchIdByCode = new Map(BRANCHES.map((b, i) => [b.code, branchIds[i]!]))
+
+      // Hashing dilakukan paralel: scrypt N=2^16 butuh ~100 ms per password, dan
+      // berurutan akan menambah setengah detik ke tiap kali seed dijalankan.
+      const userRows = await tx<{ id: string }[]>`
+        INSERT INTO users ${tx(
+          await Promise.all(
+            USERS.map(async (u) => ({
+              email: u.email,
+              name: u.name,
+              password_hash: await hashPassword(u.password),
+              role: u.role,
+              active: true,
+            })),
+          ),
+          'email',
+          'name',
+          'password_hash',
+          'role',
+          'active',
+        )}
+        RETURNING id
+      `
+      const userIds = userRows.map((r) => Number(r.id))
+
+      const scopeRows = USERS.flatMap((u, i) =>
+        u.branches.map((code) => ({
+          user_id: userIds[i]!,
+          branch_id: branchIdByCode.get(code)!,
+        })),
+      )
+
+      if (scopeRows.length > 0) {
+        await tx`INSERT INTO user_branches ${tx(scopeRows, 'user_id', 'branch_id')}`
+      }
 
       const cabinetRows = await tx<{ id: string }[]>`
         INSERT INTO cabinets ${tx(
@@ -492,7 +581,19 @@ async function main() {
         `  slot              ${summary!.slots}`,
         `  transaksi swap    ${summary!.swaps}  (${HISTORY_DAYS} hari)`,
         `  di 24 jam terakhir ${summary!.swaps_24h}`,
+        `  pengguna          ${USERS.length}`,
         `  waktu             ${((Date.now() - startedAt) / 1000).toFixed(1)}s`,
+        '',
+        'Akun demo (hanya untuk lokal):',
+        ...USERS.map(
+          (u) =>
+            `  ${u.email.padEnd(22)} ${u.password.padEnd(22)} ${u.role}` +
+            (u.role === 'ADMIN'
+              ? '  (semua cabang)'
+              : u.branches.length
+                ? `  (${u.branches.join(', ')})`
+                : '  (belum punya cabang — sengaja)'),
+        ),
         '',
         // Heartbeat disemai sebagai stempel waktu absolut, jadi ia menua sementara
         // "sekarang" terus berjalan. Tanpa catatan ini, orang yang membuka dashboard

@@ -1,5 +1,5 @@
 /**
- * Kontrak bersama antara Nitro dan Vue.
+ * Kontrak bersama antara API Express dan client Vue.
  *
  * Skema Zod di sini adalah SATU-SATUNYA definisi bentuk query. Server memakainya
  * untuk memvalidasi input yang masuk; client memakai tipe yang diturunkan
@@ -166,17 +166,6 @@ export type FleetSummary = {
 
 export type FleetSummaryResponse = { data: FleetSummary }
 
-// ---------------------------------------------------------------------------
-// Kontrak error
-// ---------------------------------------------------------------------------
-
-export const API_ERROR_CODES = ['VALIDATION_ERROR', 'NOT_FOUND', 'INTERNAL'] as const
-export type ApiErrorCode = (typeof API_ERROR_CODES)[number]
-
-export type ApiErrorBody = {
-  error: {
-    code: ApiErrorCode
-    message: string
-    details?: { path: string; message: string }[]
-  }
-}
+// Kontrak error pindah ke `./errors.ts` — bentuknya berlaku untuk seluruh API,
+// bukan hanya domain cabinet.
+export type { ApiErrorBody, ApiErrorCode } from './errors.js'

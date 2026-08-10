@@ -16,7 +16,7 @@ Mengerjakan empat bagian assessment dalam satu repositori Git:
 | B1 — Geofence check-in (20) | Kode TS + test | `shared/geofence/` + `tests/` |
 | B2/B3 — Scaling & PostGIS (10) | Tulisan | `docs/B-scaling.md` |
 | C — Code review & security (20) | Tulisan + kode | `docs/C-code-review.md` |
-| D — Battery Swap Monitoring Dashboard (25) | Aplikasi | `app/`, `server/`, `db/`, `scripts/` |
+| D — Battery Swap Monitoring Dashboard (25) | Aplikasi | `src/`, `server/`, `db/`, `scripts/` |
 
 **Target user Bagian D:** tim operasional internal ECGO yang memantau cabinet battery
 swap dari desk maupun dari lapangan lewat tablet. Mereka butuh satu pertanyaan
@@ -28,7 +28,8 @@ terjawab cepat: *cabinet mana yang bermasalah sekarang, dan seberapa sibuk dia.*
 
 | Layer | Pilihan | Alasan |
 | --- | --- | --- |
-| Framework | **Nuxt 4** (Vue 3, Composition API) | Soal mengizinkan: *"Kalau pengalamanmu di stack lain (Laravel/Vue/Nuxt/Express), tetap kerjakan — untuk Bagian B dan D kamu boleh pakai stack yang kamu kuasai asalkan TypeScript, dan tulis di README."* Pengalaman produksi saya Vue 3, bukan React. |
+| Framework | **Vue 3 SPA** (Composition API, Vite, Vue Router, Pinia) | Soal mengizinkan: *"Kalau pengalamanmu di stack lain (Laravel/Vue/Nuxt/Express), tetap kerjakan — untuk Bagian B dan D kamu boleh pakai stack yang kamu kuasai asalkan TypeScript, dan tulis di README."* Vue disebut namanya, dan itu stack produksi saya. |
+| API | **Express 5** (TypeScript) | Juga disebut namanya di kalimat izin yang sama. |
 | Bahasa | **TypeScript** strict | Wajib, dan memang syarat satu-satunya yang tidak bisa ditawar. |
 | Styling | **Tailwind CSS v4** | Diminta eksplisit; juga stack saya. |
 | Database | **PostgreSQL 16** via Docker Compose | Diminta; lokal supaya reviewer bisa `docker compose up` tanpa akun Supabase. |
@@ -38,21 +39,15 @@ terjawab cepat: *cabinet mana yang bermasalah sekarang, dan seberapa sibuk dia.*
 | Migrasi | file `.sql` bernomor + runner kecil | Pola Flyway yang saya pakai sehari-hari, tanpa dependency berat. |
 
 **Catatan jujur tentang penyimpangan stack.** Tabel "Wajib ada" di Bagian D menyebut
-Next.js 15, sementara bagian "Konteks produk & stack" memberi izin memakai Nuxt.
-Kedua kalimat itu bertabrakan. Saya memilih Nuxt karena (a) izinnya eksplisit dan
-menyebut Nuxt secara nama, dan (b) Sesi 3 mewajibkan saya menjelaskan tiap baris kode
-tanpa AI — menulis Next.js hasil generate yang tidak saya kuasai akan gugur di situ.
-Pemetaan konsep Next→Nuxt saya tulis di README supaya penilaian tetap apple-to-apple.
+Next.js 15, sementara bagian "Konteks produk & stack" memberi izin memakai Vue atau
+Express. Kedua kalimat itu bertabrakan. Saya memilih Vue + Express karena (a) izinnya
+eksplisit dan menyebut keduanya secara nama, dan (b) Sesi 3 mewajibkan saya
+menjelaskan tiap baris kode tanpa AI — menulis Next.js hasil generate yang tidak saya
+kuasai akan gugur di situ.
 
-### Peta konsep Next.js 15 → Nuxt 4
-
-| Next.js 15 (App Router) | Nuxt 4 | Dipakai di |
-| --- | --- | --- |
-| Server Component | komponen Vue yang di-render Nitro saat SSR | semua page |
-| `"use client"` | `<script setup>` + `onMounted` / `.client.vue` | chart, debounce input |
-| Route Handler `app/api/*/route.ts` | Nitro `server/api/*.get.ts` | 3 endpoint |
-| `fetch` + `revalidate` | `useFetch` / `$fetch` + `getCachedFunction` | list & detail |
-| `searchParams` | `useRoute().query` + `router.replace` | URL state |
+**Catatan riwayat.** Versi pertama repo ini memakai Nuxt, lalu dipindahkan ke Vue
+murni + Express. Riwayat commit-nya sengaja tidak dihapus. Apa yang hilang bersama
+SSR dan bagaimana digantikan saya tulis di README §3.
 
 ---
 
@@ -80,34 +75,23 @@ npm run build
 ecgo-ops-dashboard/
 ├─ SPEC.md                    ← dokumen ini
 ├─ README.md                  ← setup, asumsi, trade-off, AI disclosure
-├─ docker-compose.yml
-├─ docs/
-│  ├─ A-konsep.md             ← A1–A12
-│  ├─ B-scaling.md            ← B2, B3
-│  └─ C-code-review.md        ← C1, C2 + rewrite route handler
-├─ db/migrations/
-│  ├─ 001_schema.sql
-│  └─ 002_indexes.sql
-├─ scripts/
-│  ├─ migrate.ts
-│  └─ seed.ts
-├─ shared/
+├─ docker-compose.yml · index.html · vite.config.ts
+├─ docs/{A-konsep,B-scaling,C-code-review}.md
+├─ db/migrations/{001_schema,002_indexes,003_auth}.sql
+├─ scripts/{migrate,seed,simulate}.ts
+├─ shared/                    ← dipakai KEDUA sisi
 │  ├─ geofence/evaluateCheckIn.ts   ← Bagian B1
-│  └─ contracts/cabinets.ts         ← skema Zod dipakai server + client
-├─ server/
-│  ├─ api/cabinets/index.get.ts
-│  ├─ api/cabinets/[code].get.ts
-│  ├─ api/health.get.ts
-│  └─ utils/{db,errors,query}.ts
-├─ app/
-│  ├─ assets/{css,brand}/
-│  ├─ components/
-│  ├─ composables/useCabinetQuery.ts
-│  ├─ layouts/default.vue
-│  └─ pages/cabinets/{index,[code]}.vue
-└─ tests/
-   ├─ geofence.spec.ts        ← ≥10 test, termasuk 5 kasus soal
-   └─ api-contract.spec.ts
+│  ├─ contracts/{cabinets,auth,errors}.ts
+│  └─ auth/password.ts              ← scrypt, dipakai server dan seed
+├─ server/                    ← Express 5
+│  ├─ index.ts · env.ts · db.ts · http.ts · auth.ts
+│  └─ routes/{auth,cabinets,misc}.ts
+├─ src/                       ← Vue 3 SPA
+│  ├─ main.ts · App.vue
+│  ├─ api/client.ts · composables/{useApi,useCabinetQuery,useNow,useTheme}.ts
+│  ├─ router/index.ts · stores/auth.ts
+│  ├─ views/ · components/ · utils/ · assets/css/
+└─ tests/{geofence,api-contract,auth}.spec.ts + helpers.ts
 ```
 
 ---
@@ -144,7 +128,12 @@ swap_transactions(id pk, cabinet_id fk, slot_no, rider_ref, occurred_at,
 
 Semua respons sukses: `{ "data": ..., "meta"?: ... }`
 Semua respons error: `{ "error": { "code": ..., "message": ..., "details"?: ... } }`
-dengan `code` ∈ `VALIDATION_ERROR (400) | NOT_FOUND (404) | INTERNAL (500)`.
+dengan `code` ∈ `VALIDATION_ERROR (400) | UNAUTHORIZED (401) | NOT_FOUND (404) |
+TOO_MANY_REQUESTS (429) | INTERNAL (500)`.
+
+Semua endpoint cabinet dan summary menuntut sesi, dan hasilnya dibatasi ke cabang
+yang menjadi hak pengguna. Objek di luar ruang lingkup dijawab **404, bukan 403** —
+403 mengonfirmasi bahwa objeknya ada.
 
 ### `GET /api/cabinets`
 
@@ -174,6 +163,8 @@ Meta: `{ page, pageSize, total, totalPages }`
 2. Agregasi swap 24 jam dihitung `COUNT(...)` di PostgreSQL. Tidak boleh `SELECT *` lalu `.reduce()`.
 3. Halaman detail maksimal 4 query, dijalankan paralel, tanpa query di dalam loop.
 4. Tidak ada string interpolation ke dalam SQL. Semua parameterised.
+5. Ruang lingkup cabang selalu datang dari **sesi**, tidak pernah dari query string,
+   dan dibangun oleh satu fungsi yang dipakai seluruh query.
 
 ---
 

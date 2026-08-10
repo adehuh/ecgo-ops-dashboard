@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/brand/favicon.png" />
+    <meta
+      name="description"
+      content="Dashboard operasional internal ECGO untuk memantau cabinet battery swap."
+    />
+    <meta name="theme-color" content="#0B1210" />
+    <title>ECGO Ops · Battery Swap Monitoring</title>
+
+    <!--
+      Tema dipasang SEBELUM CSS dan sebelum aplikasi Vue di-mount.
+
+      Ini yang menggantikan keunggulan SSR: pada SPA, HTML awal dikirim polos dan
+      Vue baru berjalan setelah bundelnya diunduh. Kalau kelas tema baru dipasang
+      di dalam komponen, pengguna akan melihat kilatan putih dulu setiap kali
+      memuat halaman. Skrip sinkron kecil di <head> berjalan sebelum paint
+      pertama, jadi tidak ada kedipan sama sekali.
+
+      Dibuat sekecil mungkin dan tanpa dependensi — apa pun di sini menghambat
+      render pertama.
+    -->
+    <script>
+      ;(function () {
+        try {
+          var m = document.cookie.match(/(?:^|;\s*)ecgo-theme=(light|dark)/)
+          // Default gelap: dashboard ini dipandangi berjam-jam, sering di ruang
+          // kontrol yang redup.
+          if (!m || m[1] === 'dark') document.documentElement.classList.add('dark')
+        } catch (e) {
+          document.documentElement.classList.add('dark')
+        }
+      })()
+    </script>
+  </head>
+
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

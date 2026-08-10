@@ -1,8 +1,8 @@
 /**
  * Koneksi Postgres untuk skrip CLI (migrate, seed).
  *
- * Terpisah dari `server/utils/db.ts` karena skrip ini jalan di luar Nitro, jadi
- * `useRuntimeConfig()` tidak tersedia. Keduanya membaca variabel yang sama.
+ * Terpisah dari `server/db.ts` karena skrip ini jalan di luar aplikasi Express, jadi
+ * konfigurasi server tidak tersedia. Keduanya membaca variabel lingkungan yang sama.
  */
 import { existsSync } from 'node:fs'
 import postgres from 'postgres'

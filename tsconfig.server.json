@@ -1,0 +1,20 @@
+{
+  "//": "NodeNext supaya apa yang dikompilasi = apa yang dijalankan Node ESM. Konsekuensinya import relatif wajib berakhiran .js; itu memang aturan Node ESM, bukan keanehan TypeScript.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "outDir": "dist",
+    "rootDir": ".",
+    "sourceMap": true,
+    "types": ["node"]
+  },
+  "include": ["server/**/*.ts", "shared/**/*.ts"]
+}

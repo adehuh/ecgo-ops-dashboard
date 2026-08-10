@@ -1,0 +1,1 @@
+{"root":["./types/nitro-nuxt.d.ts","../server/api/health.get.ts","../server/api/summary.get.ts","../server/api/cabinets/[code].get.ts","../server/api/cabinets/index.get.ts","../server/utils/api.ts","../server/utils/db.ts","./types/nitro.d.ts"],"version":"5.9.3"}

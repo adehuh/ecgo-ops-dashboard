@@ -2,7 +2,7 @@
 
 Kandidat: **Ade Rusmana** · TEST-ENG-FS-001
 
-> Catatan: pengalaman produksi saya di Vue 3 / Nuxt, bukan React. Pertanyaan A2–A6
+> Catatan: pengalaman produksi saya di Vue 3 (SPA, Vite/Pinia), bukan React. Pertanyaan A2–A6
 > dan A11–A12 spesifik Next.js, dan saya jawab sesuai pertanyaannya. Di tempat
 > yang saya tidak yakin persis pada versi 15, saya tulis apa yang saya yakini dan
 > apa yang akan saya cek — bukan menebak dengan nada pasti.
@@ -85,11 +85,16 @@ atau tunda aksesnya ke `useEffect` yang hanya jalan di browser.
 (Tambahan yang sering terlupa: Context Provider dan custom hook yang di dalamnya
 memakai ketiga hal di atas juga harus client.)
 
-**Padanan di Nuxt**, yang saya pakai di Bagian D: semua komponen dirender di server
-secara default; yang butuh browser dibungkus `<ClientOnly>`, ditaruh di `onMounted`,
-atau diberi akhiran `.client.vue`. Konsepnya sama — bedanya Nuxt tidak mengirimkan
-dua jenis komponen yang berbeda, ia mengirim satu komponen yang tahu kapan ia
-berada di browser.
+**Padanan di stack yang saya pakai di Bagian D** (Vue SPA + Express): pemisahannya
+justru lebih tegas, karena tidak ada satu pun komponen yang berjalan di server —
+`src/` seluruhnya browser, `server/` seluruhnya Node, dan yang boleh dipakai keduanya
+hanya kode murni di `shared/`. Kelas kesalahan yang ditanyakan soal ini (meng-import
+sesuatu yang menyentuh `window` ke dalam kode server) tidak bisa terjadi tanpa
+sengaja, karena batasnya adalah direktori, bukan direktif di baris pertama file.
+
+Harganya: tidak ada SSR sama sekali, jadi HTML awal kosong dan first paint bergantung
+pada bundel. Untuk dashboard internal di balik login itu pertukaran yang saya terima —
+alasannya di README §3.
 
 ---
 
@@ -139,9 +144,12 @@ Yang saya hindari: menempel `?t=${Date.now()}` pada URL. Itu menyembunyikan geja
 membuat cache tidak pernah kena untuk siapa pun, dan menyulitkan orang berikutnya
 menemukan penyebab aslinya.
 
-**Di Bagian D** saya menyelesaikan ini di tingkat kebijakan, bukan tambal-sulam:
-`routeRules` menetapkan `cache-control: no-store` untuk seluruh `/api/**`. Dashboard
-operasional adalah pembacaan waktu-nyata; kesegaran adalah produknya.
+**Di Bagian D** saya menyelesaikan ini di tingkat kebijakan, bukan tambal-sulam: satu
+middleware Express menetapkan `Cache-Control: private, no-store` untuk seluruh
+`/api/**`. Dua kata itu dipilih terpisah — `no-store` karena dashboard operasional
+adalah pembacaan waktu-nyata dan kesegaran adalah produknya, `private` karena
+responsnya sudah dibatasi ruang lingkup cabang per pengguna dan tidak boleh disimpan
+cache bersama mana pun.
 
 ---
 
@@ -196,10 +204,13 @@ Dua hal lain yang ikut diperbaiki di atas: `encodeURIComponent` (kata kunci beri
 `&` atau `#` akan merusak URL-nya), dan pemeriksaan `r.ok` (`fetch` **tidak** menolak
 promise pada status 404 atau 500 — kesalahan yang sangat sering saya temui di review).
 
-Untuk kode sungguhan saya lebih memilih tidak menulis ini sendiri: TanStack Query
-(atau `useFetch` Nuxt, seperti di Bagian D) sudah menangani pembatalan, deduplikasi,
-dan kunci cache dengan benar. Di Bagian D, pembatalan-per-kata-kunci ini ditangani
-`useFetch` dengan `query` reaktif, dan debounce 350 ms hanya menghemat permintaan.
+Di Bagian D saya menulis lapisan ini sendiri, di `src/composables/useApi.ts`, karena
+tanpa Nuxt tidak ada `useFetch` — dan justru itu membuat perbaikannya kasatmata: tiap
+permintaan baru membatalkan yang lama lewat `AbortController`, DAN hasil yang terlanjur
+sampai diperiksa ulang terhadap nomor urut permintaan. Dua lapis, karena pembatalan itu
+kooperatif: respons yang sudah ada di jaringan tetap bisa menyelesaikan promise-nya.
+Untuk proyek yang lebih besar saya akan memakai TanStack Query, yang sudah menangani
+pembatalan, deduplikasi, dan kunci cache dengan benar.
 
 ---
 
@@ -547,9 +558,10 @@ Yang mungkin dimaksud, tergantung tujuannya:
 
 Kebetulan **Nuxt memang punya `useState()`** — state bersama yang aman-SSR dan
 ter-serialisasi dari server ke client. Nama itu paling dekat dengan "useServerState",
-dan saya menduga dari situlah kebingungannya berasal. Di Bagian D saya memakainya
-lewat `useCookie` untuk tema, supaya kelas `dark` sudah benar di byte pertama HTML
-alih-alih berkedip saat hidrasi.
+dan saya menduga dari situlah kebingungannya berasal. Di Bagian D (Vue SPA, tanpa
+Nuxt) padanannya adalah store Pinia untuk state lintas komponen, dan skrip kecil di
+`<head>` untuk hal yang harus benar sebelum aplikasi sempat berjalan — seperti kelas
+tema.
 
 Kalau ternyata ini API baru yang muncul setelah pengetahuan saya, cara saya
 memeriksanya: cari di `node_modules/next/types` dan changelog rilis Next, bukan
