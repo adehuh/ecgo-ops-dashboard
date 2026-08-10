@@ -14,8 +14,10 @@ export default defineNuxtConfig({
     // Server-only. Nothing here is serialised into the client payload — only the
     // `public` block below is. Keeping DATABASE_URL out of `public` is the whole
     // reason the credential never reaches the browser bundle.
-    databaseUrl: '', // <- NUXT_DATABASE_URL
-    staleMinutes: '10', // <- NUXT_STALE_MINUTES
+    // Read from DATABASE_URL so the app and the CLI scripts share one variable;
+    // NUXT_DATABASE_URL still overrides it at runtime in production.
+    databaseUrl: process.env.DATABASE_URL ?? '',
+    staleMinutes: process.env.ECGO_STALE_MINUTES ?? '10',
 
     public: {
       appName: 'ECGO Ops',
