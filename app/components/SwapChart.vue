@@ -17,7 +17,16 @@ const props = defineProps<{ hourly: HourlyBucket[] }>()
 
 const max = computed(() => Math.max(1, ...props.hourly.map((h) => h.count)))
 const total = computed(() => props.hourly.reduce((sum, h) => sum + h.count, 0))
-const peak = computed(() => props.hourly.reduce((a, b) => (b.count > a.count ? b : a), props.hourly[0]!))
+
+// API menjamin 24 bucket, tapi komponen ini tidak boleh meledak kalau suatu saat
+// menerima array kosong — `reduce` dengan elemen pertama sebagai nilai awal akan
+// menghasilkan undefined, dan `peak.count` di template melempar TypeError yang
+// mematikan seluruh halaman demi satu grafik.
+const peak = computed<HourlyBucket | null>(() =>
+  props.hourly.length === 0
+    ? null
+    : props.hourly.reduce((a, b) => (b.count > a.count ? b : a), props.hourly[0]!),
+)
 
 /**
  * Judulnya menyebut jam mulai yang sebenarnya, bukan "24 jam terakhir".
@@ -46,7 +55,7 @@ const axisTop = computed(() => {
   <figure class="space-y-3">
     <figcaption class="flex flex-wrap items-baseline justify-between gap-2">
       <span class="text-sm font-medium">Swap berhasil per jam · {{ rangeLabel }}</span>
-      <span class="text-xs text-muted">
+      <span v-if="peak" class="text-xs text-muted">
         {{ formatNumber(total) }} swap pada rentang ini · puncak {{ peak.count }} pukul
         {{ wibHourLabel(peak.hourStart) }}.00
       </span>

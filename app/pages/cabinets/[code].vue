@@ -68,6 +68,20 @@ const stats = computed(() => {
   ]
 })
 
+/**
+ * Kapan panel slot terakhir berubah = slot yang PALING BARU diperbarui.
+ *
+ * Versi pertama saya memakai `slots[0].updatedAt`, yaitu slot nomor 1 — bukan yang
+ * terbaru. Tiap slot punya stempel waktunya sendiri, jadi labelnya bisa melaporkan
+ * "diperbarui 90 menit lalu" untuk cabinet yang salah satu slotnya berubah semenit
+ * lalu. Salah dengan cara yang tidak akan pernah terlihat mencurigakan.
+ */
+const slotsUpdatedAt = computed<string | null>(() => {
+  const slots = cabinet.value?.slots ?? []
+  if (slots.length === 0) return null
+  return slots.reduce((latest, s) => (s.updatedAt > latest ? s.updatedAt : latest), slots[0]!.updatedAt)
+})
+
 const SWAP_STATUS = { SUCCESS: 'Berhasil', FAILED: 'Gagal' } as const
 </script>
 
@@ -177,7 +191,7 @@ const SWAP_STATUS = { SUCCESS: 'Berhasil', FAILED: 'Gagal' } as const
         <div class="mb-4 flex items-baseline justify-between gap-3">
           <h2 class="text-sm font-medium">Slot baterai</h2>
           <p class="text-xs text-muted">
-            Diperbarui <TimeAgo :iso="cabinet.slots[0]?.updatedAt ?? null" />
+            Diperbarui <TimeAgo :iso="slotsUpdatedAt" />
           </p>
         </div>
 

@@ -494,6 +494,13 @@ async function main() {
         `  di 24 jam terakhir ${summary!.swaps_24h}`,
         `  waktu             ${((Date.now() - startedAt) / 1000).toFixed(1)}s`,
         '',
+        // Heartbeat disemai sebagai stempel waktu absolut, jadi ia menua sementara
+        // "sekarang" terus berjalan. Tanpa catatan ini, orang yang membuka dashboard
+        // 15 menit kemudian akan melihat 50 cabinet kuning dan mengira ada yang rusak.
+        'Catatan: heartbeat disemai relatif terhadap saat ini, jadi setelah ~10 menit',
+        'cabinet ONLINE akan mulai tampak "basi". Jalankan `npm run simulate` di',
+        'terminal lain agar armadanya hidup, atau cukup jalankan `npm run seed` lagi.',
+        '',
       ].join('\n'),
     )
   } catch (error) {

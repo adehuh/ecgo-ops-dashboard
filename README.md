@@ -350,14 +350,18 @@ itu pertimbangan utama di balik pemilihan Vue ketimbang React (§3).
 
 ## 10. Riwayat commit
 
-Commit dibuat bertahap per lapisan, dengan pesan yang menjelaskan **kenapa**, bukan
-hanya apa:
+Commit dibuat bertahap per lapisan — scaffold, Bagian B, database, API, UI,
+dokumen, lalu perbaikan hasil review. Badan pesannya menjelaskan **kenapa**, bukan
+hanya apa; beberapa di antaranya mencatat bug yang saya temukan sendiri beserta
+alasan perbaikannya. Silakan lihat `git log` untuk keseluruhannya.
+
+Contoh yang mungkin paling menjelaskan cara saya bekerja:
 
 ```
-chore: scaffold Nuxt 4 + Tailwind v4 + Postgres 16 with ECGO brand theme
-feat(bagian-b): evaluateCheckIn geofence evaluator with 36 tests
 feat(db): schema, indexes, migration runner and deterministic seed
-feat(api): cabinet list and detail endpoints with Zod validation
-feat(ui): cabinet list and detail pages, URL-driven state, three real UI states
-docs: answers for Bagian A, B2/B3, and C
+
+  ... Status quotas are allocated exactly then shuffled. Rolling per cabinet at
+  76/14/10 with a fixed PRNG seed produced zero MAINTENANCE cabinets on every
+  run -- a 0.5% draw, but a deterministic one, which left the MAINTENANCE filter
+  permanently empty and its slot-state branch dead.
 ```

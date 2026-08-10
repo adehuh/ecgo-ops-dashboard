@@ -168,9 +168,7 @@ const STATUS_LABELS = { ONLINE: 'Online', OFFLINE: 'Offline', MAINTENANCE: 'Pera
             :value="state.pageSize"
             aria-label="Jumlah baris per halaman"
             class="rounded-lg border border-border bg-surface-2 px-2.5 py-2 text-sm text-muted focus:border-accent focus:outline-none"
-            @change="
-              patch({ pageSize: Number(($event.target as HTMLSelectElement).value) as CabinetListQuery['pageSize'] })
-            "
+            @change="patch({ pageSize: Number(($event.target as HTMLSelectElement).value) })"
           >
             <option v-for="size in PAGE_SIZES" :key="size" :value="size">{{ size }} / hal</option>
           </select>

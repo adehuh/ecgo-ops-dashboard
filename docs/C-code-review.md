@@ -364,7 +364,7 @@ terstruktur berisi request id, durasi, jumlah baris, dan pengguna.
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { db } from '@/lib/db'
-import { requireSession } from '@/lib/auth'
+import { requireSession, UnauthorizedError } from '@/lib/auth'
 
 /**
  * GET /api/orders
