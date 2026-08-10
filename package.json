@@ -13,6 +13,7 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "db:reset": "tsx scripts/migrate.ts --reset",
     "seed": "tsx scripts/seed.ts",
+    "simulate": "tsx scripts/simulate.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

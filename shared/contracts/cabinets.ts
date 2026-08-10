@@ -153,6 +153,19 @@ export type CabinetDetail = {
 
 export type CabinetDetailResponse = { data: CabinetDetail }
 
+export type FleetSummary = {
+  total: number
+  online: number
+  offline: number
+  maintenance: number
+  /** Bukan ONLINE, atau ONLINE tapi basi, atau belum pernah melapor. */
+  needsAttention: number
+  swaps24h: number
+  failed24h: number
+}
+
+export type FleetSummaryResponse = { data: FleetSummary }
+
 // ---------------------------------------------------------------------------
 // Kontrak error
 // ---------------------------------------------------------------------------
