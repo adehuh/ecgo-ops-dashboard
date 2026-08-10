@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ecgo-ops-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ecgo
+      POSTGRES_PASSWORD: ecgo_dev_password
+      POSTGRES_DB: ecgo_ops
+      # Container clock in WIB so psql sessions read naturally during debugging.
+      # Application correctness never depends on this: every timestamp column is
+      # timestamptz and every bucket is computed with an explicit AT TIME ZONE.
+      TZ: Asia/Jakarta
+    ports:
+      # 55432, not 5432 — reviewers often already run a local Postgres.
+      - "55432:5432"
+    volumes:
+      - ecgo_ops_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecgo -d ecgo_ops"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  ecgo_ops_pgdata:

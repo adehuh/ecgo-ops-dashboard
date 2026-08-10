@@ -1,0 +1,215 @@
+@import 'tailwindcss';
+
+/* Tailwind v4 ships `dark:` as a media query. This dashboard has an explicit
+   toggle, so redefine the variant to follow a class on <html> instead. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------ *
+ * Brand
+ *
+ * Colours are sampled from ECGO's own assets (ecgoevmoto.com), not invented:
+ *   #00D95C  app icon green   — primary accent
+ *   #47A056  wordmark green   — secondary / chart line
+ *   #236057  wordmark teal    — deep surface tint
+ * Poppins is ECGO's own typeface (SIL OFL). Gilroy is used by ECGO too but is
+ * commercially licensed, so it is deliberately not bundled here.
+ * ------------------------------------------------------------------ */
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/brand/fonts/Poppins-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/brand/fonts/Poppins-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Poppins';
+  src: url('/brand/fonts/Poppins-ExtraBold.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Light theme is the fallback; dark is what ops actually runs. Both are defined
+   as plain custom properties so the toggle is a single class swap. */
+:root {
+  --ecgo-500: #00d95c;
+  --ecgo-600: #47a056;
+  --ecgo-800: #236057;
+
+  --bg: #f6f8f7;
+  --surface: #ffffff;
+  --surface-2: #eef2f0;
+  --border: #dbe3df;
+  --border-strong: #c2cec8;
+  --text: #0e1614;
+  --text-muted: #5a6b64;
+  --text-faint: #8b9a93;
+
+  --accent: #0f9d4f;
+  --accent-contrast: #ffffff;
+  --accent-soft: #e3f7ea;
+
+  --ok: #0f9d4f;
+  --warn: #b7791f;
+  --danger: #c53030;
+  --info: #2b6cb0;
+  --neutral: #718096;
+
+  --ring: color-mix(in oklab, var(--accent) 55%, transparent);
+  --shadow-card: 0 1px 2px rgb(14 22 20 / 6%), 0 8px 24px -12px rgb(14 22 20 / 12%);
+}
+
+.dark {
+  --bg: #0b1210;
+  --surface: #111a17;
+  --surface-2: #16211d;
+  --border: #23302b;
+  --border-strong: #33443d;
+  --text: #e8efec;
+  --text-muted: #93a69e;
+  --text-faint: #6b7f77;
+
+  --accent: #00d95c;
+  --accent-contrast: #04150b;
+  --accent-soft: color-mix(in oklab, #00d95c 14%, transparent);
+
+  --ok: #00d95c;
+  --warn: #f0b429;
+  --danger: #f2635c;
+  --info: #5aa9f0;
+  --neutral: #7d8f88;
+
+  --shadow-card: 0 1px 0 rgb(255 255 255 / 3%) inset, 0 12px 32px -20px rgb(0 0 0 / 80%);
+}
+
+/* `@theme inline` emits utilities that reference the custom property rather than
+   baking the value in, so `bg-surface` follows the light/dark cascade at runtime. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-neutral: var(--neutral);
+
+  --font-sans: 'Poppins', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  --radius-card: 0.875rem;
+}
+
+@layer base {
+  html {
+    background-color: var(--bg);
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Visible focus for keyboard users on every interactive element — ops staff
+     drive this dashboard from the keyboard far more than from the mouse. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Tabular figures stop SOC/count columns from jittering as digits change. */
+  th,
+  td {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .card {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Skip link: first tab stop, hidden until focused. */
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+  }
+  .skip-link:focus {
+    left: 0.75rem;
+    top: 0.75rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border-radius: 0.5rem;
+    font-weight: 500;
+  }
+
+  /* Shimmer used by every skeleton, so loading always looks like one system. */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--surface-2);
+  }
+  .shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--text) 7%, transparent),
+      transparent
+    );
+    animation: shimmer 1.6s infinite;
+  }
+  @keyframes shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+}
