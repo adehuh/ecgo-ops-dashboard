@@ -467,7 +467,7 @@ ribuan (bukan ratusan ribu), diurutkan berdasarkan **agregat terhitung** yang ti
 tersimpan di kolom mana pun, dan UI-nya butuh "halaman 3 dari 12". OFFSET terburuk di
 sana melewati beberapa ribu baris. Pilihan pagination adalah fungsi dari ukuran data,
 kunci sortir, dan kebutuhan UI — bukan aturan universal. Alasan lengkapnya ada di
-`README.md` §Asumsi 7.6, termasuk titik di mana saya akan pindah ke keyset.
+`README.md` §7.7, termasuk titik di mana saya akan pindah ke keyset.
 
 ---
 
