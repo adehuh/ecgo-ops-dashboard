@@ -206,8 +206,13 @@ const STATUS_LABELS = { ONLINE: 'Online', OFFLINE: 'Offline', MAINTENANCE: 'Pera
       />
 
       <!-- LOADING (pertama kali) -->
+      <!-- Jumlah baris skeleton mengikuti pageSize, bukan angka tetap.
+           Sebelumnya 8 baris untuk halaman berisi 25: begitu data tiba, tabel
+           tumbuh dan mendorong footer ke bawah — terukur sebagai layout shift.
+           Skeleton hanya berguna kalau bentuknya benar-benar sama dengan yang
+           akan menggantikannya. -->
       <div v-else-if="isFirstLoad" class="divide-y divide-border" aria-hidden="true">
-        <div v-for="i in 8" :key="i" class="flex items-center gap-4 px-4 py-3.5">
+        <div v-for="i in state.pageSize" :key="i" class="flex items-center gap-4 px-4 py-3.5">
           <div class="h-4 w-24 rounded shimmer" />
           <div class="h-4 w-32 rounded shimmer" />
           <div class="h-5 w-20 rounded-full shimmer" />

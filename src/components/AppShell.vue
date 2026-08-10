@@ -33,7 +33,16 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
 </script>
 
 <template>
-  <div class="min-h-dvh bg-bg text-text">
+  <!--
+    Kolom flex, dengan <main> flex-1.
+
+    Tanpa ini, kerangka halaman dirender sebelum komponen rute-nya tiba,
+    sehingga <main> sesaat kosong dan footer duduk tepat di bawah header —
+    lalu melompat ~660px begitu isinya datang. Terukur sebagai CLS 0,099,
+    persis di ambang "perlu perbaikan". flex-1 membuat main selalu mengisi
+    sisa tinggi layar, jadi footer tidak pernah berada di tengah halaman.
+  -->
+  <div class="flex min-h-dvh flex-col bg-bg text-text">
     <a href="#main" class="skip-link">Lompat ke konten utama</a>
 
     <header
@@ -140,11 +149,11 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
       </div>
     </header>
 
-    <main id="main" class="mx-auto max-w-[88rem] px-4 py-6 sm:px-6 sm:py-8">
+    <main id="main" class="mx-auto w-full max-w-[88rem] flex-1 px-4 py-6 sm:px-6 sm:py-8">
       <slot />
     </main>
 
-    <footer class="mx-auto max-w-[88rem] px-4 pb-10 text-xs text-faint sm:px-6">
+    <footer class="mx-auto w-full max-w-[88rem] px-4 pt-6 pb-10 text-xs text-faint sm:px-6">
       Dashboard operasional internal · data ditampilkan dalam zona waktu WIB (Asia/Jakarta)
     </footer>
   </div>

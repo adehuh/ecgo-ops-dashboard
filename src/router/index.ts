@@ -1,4 +1,11 @@
 import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router'
+// Halaman pendaratan di-import secara EAGER, sisanya lazy.
+//
+// Semua orang mendarat di sini setelah masuk, jadi chunk-nya selalu dibutuhkan —
+// memisahkannya hanya menambah satu perjalanan bolak-balik (index.js → view.js)
+// sebelum sesuatu yang berguna bisa dirender, dan itulah yang membuat <main>
+// kosong pada frame pertama.
+import CabinetListView from '@/views/CabinetListView.vue'
 import { useAuthStore } from '@/stores/auth'
 
 /**
@@ -20,7 +27,7 @@ const routes = [
   {
     path: '/cabinets',
     name: 'cabinets',
-    component: () => import('@/views/CabinetListView.vue'),
+    component: CabinetListView,
     meta: { title: 'Cabinet' },
   },
   {

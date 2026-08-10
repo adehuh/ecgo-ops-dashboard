@@ -264,6 +264,25 @@ Execution Time: 0.425 ms
 Index `(cabinet_id, occurred_at DESC)` terpakai persis seperti rancangannya. Halaman
 detail: 4 query dijalankan paralel, nol query di dalam loop.
 
+### Diukur di Chrome, build produksi
+
+Halaman `/cabinets` sesudah masuk, 25 baris, viewport 1440×900:
+
+| Metrik | Nilai |
+| --- | --- |
+| First / Largest Contentful Paint | 52 ms |
+| Cumulative Layout Shift | **0** |
+| Siap dipakai (baris pertama tampil) | ~550 ms |
+| Total ditransfer | 263 kB (script 185, css 32, font 22, gambar 17) |
+
+CLS-nya semula **0,099** — persis di ambang "perlu perbaikan". Dua penyebabnya
+ditemukan dengan `PerformanceObserver`, bukan ditebak: kerangka halaman dirender
+sebelum komponen rute tiba (footer duduk di bawah header lalu melompat ~660 px),
+dan halaman pendaratan di-lazy-load sehingga menambah satu perjalanan bolak-balik.
+Perbaikannya: `<main>` diberi `flex-1`, halaman pendaratan di-import eager, dan
+aplikasi baru di-mount setelah `router.isReady()`. Lihat §9 untuk harga dari yang
+terakhir.
+
 **Catatan jujur soal index trigram.** `002_indexes.sql` membuat index GIN `pg_trgm`
 untuk pencarian `ILIKE '%q%'`. Pada 50 cabinet, planner **mengabaikannya** dan memilih
 Seq Scan — dan itu keputusan yang benar. Saya verifikasi index-nya memang berfungsi
@@ -408,10 +427,17 @@ Saya menulisnya di sini alih-alih berharap tidak ketahuan.
    sudah saya buktikan melayani API + SPA dari satu proses dan satu port, jadi deploy
    ke satu container mestinya lurus — tapi saya belum membuktikannya di penyedia mana
    pun, jadi saya tidak mengklaimnya.
-7. **Realtime masih polling 30 detik**, bukan WebSocket atau SSE. Cukup untuk
+7. **Trade-off `router.isReady()`.** Aplikasi baru di-mount setelah navigasi
+   pertama selesai, dan navigasi itu memanggil `/api/auth/me`. Hasilnya CLS turun
+   dari 0,099 ke **0**, tapi harganya layar kosong selama panggilan itu — di
+   jaringan lambat itu bisa terasa. Saya menerimanya karena kerangka halaman
+   tanpa isi juga tidak lebih berguna daripada layar kosong; kalau nanti terbukti
+   mengganggu, gantinya adalah skeleton di dalam `index.html`, bukan kembali
+   merender kerangka kosong.
+8. **Realtime masih polling 30 detik**, bukan WebSocket atau SSE. Cukup untuk
    pemantauan cabinet; kalau ops butuh lebih cepat, `LISTEN/NOTIFY` Postgres yang
    diteruskan lewat SSE adalah langkah berikutnya.
-8. **Belum ada log terstruktur** dengan request id.
+9. **Belum ada log terstruktur** dengan request id.
 
 ---
 
