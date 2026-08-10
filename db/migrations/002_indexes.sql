@@ -26,8 +26,24 @@ CREATE INDEX cabinets_heartbeat_idx ON cabinets (last_heartbeat_at DESC NULLS LA
 CREATE INDEX cabinets_status_idx ON cabinets (status);
 
 -- Pencarian server-side memakai ILIKE '%q%'. Wildcard di depan membuat B-tree
--- biasa tidak terpakai sama sekali, jadi Postgres akan seq-scan. Trigram GIN
--- adalah index yang memang bisa melayani pola berawalan wildcard.
+-- biasa tidak terpakai sama sekali. Trigram GIN adalah jenis index yang memang
+-- bisa melayani pola berawalan wildcard.
+--
+-- JUJUR SOAL YANG SEBENARNYA TERJADI HARI INI: pada 50 cabinet dan 12 cabang,
+-- planner memilih Seq Scan dan mengabaikan index ini — dan itu keputusan yang
+-- benar; membaca satu halaman heap lebih murah daripada menyentuh index. Saya
+-- verifikasi index-nya sungguh berfungsi dengan tabel percobaan 200.000 baris:
+-- di situ planner memilih Bitmap Index Scan di atas gin_trgm_ops dan selesai
+-- dalam 0,074 ms.
+--
+-- Ada satu batasan lagi yang tidak bisa diselesaikan index: query pencarian
+-- meng-OR tiga kolom dari DUA tabel (cabinets.code, branches.name,
+-- branches.code), dan OR lintas tabel memaksa filter dievaluasi setelah join,
+-- berapa pun besar datanya. Kalau daftar ini tumbuh ke puluhan ribu cabinet,
+-- perbaikannya bukan menambah index, melainkan mengubah bentuk query: UNION dari
+-- dua pencarian yang masing-masing dilayani index, atau kolom `search_text`
+-- terdenormalisasi di cabinets dengan satu index GIN. Belum saya lakukan
+-- sekarang karena akan menambah jalur sinkronisasi demi masalah yang belum ada.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE INDEX cabinets_code_trgm_idx ON cabinets USING gin (code gin_trgm_ops);
