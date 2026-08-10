@@ -3,10 +3,9 @@ import type { ApiErrorBody, ApiErrorCode } from '@shared/contracts/errors'
 /**
  * Client HTTP tipis di atas fetch.
  *
- * Tanpa Nuxt tidak ada `useFetch`, jadi lapisan ini ditulis sendiri — dan itu
- * justru membuat dua hal yang biasanya tersembunyi menjadi eksplisit dan bisa
- * saya pertanggungjawabkan baris per baris: bagaimana error diubah menjadi
- * sesuatu yang bisa ditampilkan, dan bagaimana request lama dibatalkan.
+ * Ditulis sendiri, bukan memakai pustaka, supaya dua hal yang biasanya
+ * tersembunyi menjadi eksplisit: bagaimana error diubah menjadi sesuatu yang
+ * layak ditampilkan ke pengguna, dan bagaimana request lama dibatalkan.
  */
 
 export class ApiRequestError extends Error {

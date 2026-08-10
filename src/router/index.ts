@@ -11,10 +11,9 @@ import { useAuthStore } from '@/stores/auth'
 /**
  * Rute ditulis eksplisit, bukan diturunkan dari struktur folder.
  *
- * Kehilangan file-based routing Nuxt ternyata bukan kerugian di sini: berkas ini
- * adalah satu tempat yang bisa dibaca untuk menjawab "halaman apa saja yang ada,
- * dan mana yang publik" — pertanyaan keamanan yang, dengan routing berbasis
- * folder, harus dijawab dengan menelusuri direktori.
+ * Berkas ini adalah satu tempat yang bisa dibaca untuk menjawab "halaman apa
+ * saja yang ada, dan mana yang publik" — pertanyaan keamanan yang, dengan
+ * routing berbasis folder, hanya bisa dijawab dengan menelusuri direktori.
  */
 const routes = [
   { path: '/', redirect: '/cabinets' },

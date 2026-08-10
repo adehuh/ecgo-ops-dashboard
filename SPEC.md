@@ -45,9 +45,9 @@ eksplisit dan menyebut keduanya secara nama, dan (b) Sesi 3 mewajibkan saya
 menjelaskan tiap baris kode tanpa AI — menulis Next.js hasil generate yang tidak saya
 kuasai akan gugur di situ.
 
-**Catatan riwayat.** Versi pertama repo ini memakai Nuxt, lalu dipindahkan ke Vue
-murni + Express. Riwayat commit-nya sengaja tidak dihapus. Apa yang hilang bersama
-SSR dan bagaimana digantikan saya tulis di README §3.
+**Catatan riwayat.** Beberapa commit pertama memakai Nuxt sebelum dipindahkan ke Vue
+murni + Express; riwayatnya sengaja tidak ditulis ulang. Konsekuensi memilih SPA
+ketimbang framework SSR saya bahas di README §3.
 
 ---
 

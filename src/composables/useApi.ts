@@ -4,7 +4,7 @@ import { apiFetch, ApiRequestError, describeApiError } from '@/api/client'
 export type ApiStatus = 'idle' | 'pending' | 'success' | 'error'
 
 /**
- * Pengambilan data reaktif — pengganti `useFetch` milik Nuxt.
+ * Pengambilan data reaktif yang sadar pembatalan.
  *
  * Yang paling penting di sini adalah PEMBATALAN. URL-nya reaktif (berubah tiap
  * kali kata kunci atau halaman berubah), dan tanpa membatalkan permintaan

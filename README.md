@@ -135,28 +135,30 @@ belajar akan lolos di kertas dan gugur di sesi itu.
 
 Semua syarat lain dipenuhi apa adanya: TypeScript strict, Tailwind, PostgreSQL, Zod.
 
-**Catatan jujur:** versi pertama repo ini saya kerjakan dengan Nuxt, lalu saya pindah
-ke Vue murni + Express. Riwayat commit-nya masih ada dan sengaja tidak saya hapus —
-`refactor: replace Nuxt with Vue 3 SPA + Express` mencatat apa yang berpindah dan apa
-yang tidak. Yang ikut pindah tanpa berubah sama sekali: seluruh SQL, `evaluateCheckIn`
-beserta 36 test-nya, skema Zod di `shared/contracts/`, dan semua komponen Vue.
+### Konsekuensi memilih SPA, bukan framework SSR
 
-### Yang hilang bersama Nuxt, dan bagaimana digantikan
+Ini pertanyaan yang wajar diajukan penilai, jadi saya jawab di muka. SPA memang
+kehilangan sesuatu dibanding Next.js atau framework SSR lain:
 
-Ini penting untuk dinilai jujur — SPA memang kehilangan sesuatu:
-
-| Hilang | Konsekuensi nyata | Penggantinya di sini |
+| Hilang | Konsekuensi nyata | Bagaimana ditangani di sini |
 | --- | --- | --- |
-| SSR | HTML awal kosong; SEO dan first paint lebih lambat | Dashboard internal di balik login — SEO tidak relevan, dan kecepatan didapat dari bundel kecil (40 kB gzip untuk shell) |
-| Kelas tema dari server | Kilatan putih saat memuat halaman | Skrip sinkron 6 baris di `<head>` `index.html`, berjalan sebelum paint pertama |
-| `useFetch` | Tidak ada pengambilan data reaktif bawaan | `src/composables/useApi.ts` — 60 baris, dengan pembatalan `AbortController` yang eksplisit |
+| Server-side rendering | HTML awal kosong; SEO dan first paint bergantung pada bundel | Dashboard internal di balik login — SEO tidak relevan. Diukur di Chrome: FCP 52 ms, CLS 0 (§6). |
+| Tema dari server | Kilatan putih saat memuat halaman | Skrip sinkron 6 baris di `<head>` `index.html`, berjalan sebelum paint pertama |
+| Pengambilan data bawaan framework | Harus ditulis sendiri | `src/composables/useApi.ts` — 60 baris, dengan pembatalan `AbortController` yang eksplisit dan pemeriksaan nomor urut permintaan |
 | Auto-import | Semua import ditulis tangan | Lebih berisik satu kali, tapi "ini datang dari mana?" bisa dijawab tanpa menebak |
-| File-based routing | Rute tidak lagi otomatis | `src/router/index.ts` — satu berkas yang bisa dibaca untuk menjawab "rute apa saja yang ada, dan mana yang publik" |
-| Satu perintah dev | Dua proses | `concurrently`, tetap satu `npm run dev` |
+| Routing berbasis folder | Rute harus didaftarkan | `src/router/index.ts` — satu berkas yang bisa dibaca untuk menjawab "rute apa saja yang ada, dan mana yang publik" |
+| Satu proses saat dev | Dua proses | `concurrently`, tetap satu `npm run dev` |
 
-Yang justru **didapat**: batas client/server jadi tegas dan kasatmata (tidak ada kode
-yang "kebetulan" jalan di dua tempat), dependensi turun dari 631 paket menjadi 250,
-dan seluruh permukaan framework adalah hal yang saya pakai setiap hari.
+Yang justru **didapat**: batas client/server jadi tegas dan kasatmata — `src/`
+seluruhnya browser, `server/` seluruhnya Node, dan hanya kode murni di `shared/`
+yang boleh dipakai keduanya. Tidak ada kode yang "kebetulan" berjalan di dua tempat.
+Total dependensi 250 paket.
+
+**Catatan riwayat.** Beberapa commit pertama repo ini memakai Nuxt sebelum saya pindah
+ke Vue murni + Express. Riwayatnya sengaja tidak saya tulis ulang, jadi `git log` masih
+menunjukkan perpindahan itu apa adanya. Yang ikut pindah tanpa berubah sama sekali:
+seluruh SQL, `evaluateCheckIn` beserta 36 test-nya, skema Zod di `shared/contracts/`,
+dan semua komponen Vue.
 
 ---
 

@@ -8,13 +8,6 @@ import { onMounted, onUnmounted, ref } from 'vue'
  * ref-nya berada di scope modul dan pemakainya dihitung, jadi hanya ada satu
  * interval berapa pun banyak komponen yang membacanya — dan intervalnya berhenti
  * begitu komponen terakhir dilepas.
- *
- * Catatan setelah pindah dari Nuxt: versi sebelumnya sengaja menahan nilainya
- * di `null` sampai komponen ter-mount, supaya HTML hasil SSR sama persis dengan
- * render pertama di client (kalau tidak, "3 mnt lalu" versus "4 mnt lalu"
- * memicu hydration mismatch). Pada SPA tidak ada render server yang harus
- * dicocokkan, jadi pengaman itu tidak lagi diperlukan dan jamnya bisa langsung
- * hidup.
  */
 const TICK_MS = 30_000
 

@@ -3,15 +3,13 @@ import { ref } from 'vue'
 /**
  * Tema terang/gelap, disimpan di cookie.
  *
- * Cookie, bukan localStorage — dan alasannya berubah setelah pindah dari Nuxt.
- * Dulu alasannya SSR (cookie ikut request dokumen, jadi server bisa merender
- * kelas yang benar). Sekarang alasannya skrip kecil di <head> index.html:
- * skrip itu berjalan sebelum paint pertama dan membaca cookie yang sama, jadi
- * tidak ada kilatan putih sebelum Vue sempat di-mount.
+ * Nilainya dibaca dua kali oleh dua pihak: skrip kecil di <head> index.html
+ * yang berjalan sebelum paint pertama (sehingga tidak ada kilatan putih sebelum
+ * Vue sempat di-mount), dan composable ini setelah aplikasi hidup.
  *
- * localStorage sebenarnya juga bisa dibaca skrip itu. Cookie tetap dipilih agar
- * preferensinya ikut terkirim ke server — berguna nanti kalau ada laporan PDF
- * atau email yang perlu mengikuti tema pengguna.
+ * localStorage juga bisa dibaca skrip itu. Cookie tetap dipilih supaya
+ * preferensinya ikut terkirim ke server — berguna begitu ada laporan PDF atau
+ * email yang perlu mengikuti tema pengguna.
  */
 export type ThemeName = 'dark' | 'light'
 

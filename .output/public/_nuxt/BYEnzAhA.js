@@ -1,1 +1,0 @@
-import{D as e,P as t,X as n,at as r}from"./BhSShebg.js";import{u as i}from"./D_YpGBH6.js";var a=t({__name:`index`,async setup(t){let a,o;return[a,o]=r(()=>i(`/cabinets`,{redirectCode:302,replace:!0})),await a,o(),(t,r)=>(n(),e(`div`))}});export{a as default};

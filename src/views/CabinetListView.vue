@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { toQueryString } from '@/api/client'
-// Tanpa auto-import Nuxt, tiap komponen di-import eksplisit. Lebih berisik satu
-// kali, tapi "komponen ini datang dari mana?" jadi bisa dijawab tanpa menebak.
+// Tiap komponen di-import eksplisit: lebih berisik satu kali, tapi "komponen ini
+// datang dari mana?" bisa dijawab tanpa menebak.
 import KpiStrip from '@/components/KpiStrip.vue'
 import PaginationBar from '@/components/PaginationBar.vue'
 import SlotFillBar from '@/components/SlotFillBar.vue'
