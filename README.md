@@ -1,19 +1,18 @@
 # ECGO — Battery Swap Monitoring Dashboard
 
 Jawaban untuk **TEST-ENG-FS-001 · Fullstack Developer (Web)**
-Kandidat: **Ade Rusmana** · ar.xendit@bti.id
-
-> ⚠️ **Sebelum dikirim, lengkapi dulu:** nomor WhatsApp dan tanggal selesai di tabel
-> identitas di bawah. Saya sengaja tidak mengisinya dengan tebakan.
+Kandidat: **Ade Rusmana** · adeforgaming@gmail.com
 
 | Field | Isi |
 | --- | --- |
 | Nama lengkap | Ade Rusmana |
-| Email | ar.xendit@bti.id |
-| Nomor WhatsApp | _(isi sebelum kirim)_ |
+| Email | adeforgaming@gmail.com |
+| Nomor WhatsApp | +62 812-9669-7727 |
 | Tanggal mulai mengerjakan | 10 Agustus 2026 |
-| Tanggal selesai | _(isi sebelum kirim)_ |
+| Tanggal selesai | 10 Agustus 2026 |
 | AI tool yang dipakai | Claude Code (Opus) — rincian per bagian di §10 |
+| Repo | https://github.com/adehuh/ecgo-ops-dashboard |
+| Ketersediaan Live Defense | **Kamis, 13 Agustus 2026, pukul 10.00 WIB** |
 
 ---
 
@@ -30,6 +29,20 @@ Kandidat: **Ade Rusmana** · ar.xendit@bti.id
 
 Bagian B1 juga bisa dicoba langsung di browser pada halaman **`/geofence`** — halaman
 itu meng-import modul yang sama persis yang diuji unit test, bukan salinannya.
+
+### Tampilan
+
+Bukan tangkapan layar untuk setiap fitur — hanya yang **membuktikan sebuah keputusan**
+yang saya tulis di §7. Semuanya diambil dari aplikasi yang berjalan, bukan mockup.
+
+| | |
+| --- | --- |
+| <img src="docs/screenshots/02-list-dark.png" alt="Daftar cabinet, tema gelap" width="100%"> **Daftar cabinet.** Badge "Online · basi" dan "Online · belum lapor" adalah §7.4 dan §7.5: cabinet yang mengaku sehat tapi diam terlalu lama tidak boleh terlihat sama dengan yang benar-benar sehat. | <img src="docs/screenshots/04-detail.png" alt="Detail cabinet" width="100%"> **Detail.** Banner basi (§7.3) — data terakhir tetap ditampilkan, tapi ditandai. Slot kosong tertulis "Tidak ada baterai", bukan 0% (§7.6). |
+| <img src="docs/screenshots/06-scoped-supervisor.png" alt="Tampilan supervisor" width="100%"> **Ruang lingkup cabang.** Supervisor Kemayoran melihat **10** cabinet, bukan 50 — termasuk KPI di atasnya. Ruang lingkupnya ditulis permanen di header supaya tidak ada yang salah membaca angka ini sebagai angka armada. | <img src="docs/screenshots/07-cross-branch-404.png" alt="404 lintas cabang" width="100%"> **404, bukan 403** (§7.12). Membuka cabinet milik cabang lain secara langsung menghasilkan jawaban yang tidak bisa dibedakan dari "cabinet tidak ada". |
+| <img src="docs/screenshots/05-empty.png" alt="Empty state" width="100%"> **Empty state.** Dibedakan dari error dan dari "belum ada data", dan menawarkan jalan keluar alih-alih jalan buntu. | <img src="docs/screenshots/03-list-light.png" alt="Tema terang" width="100%"> **Tema terang.** Dipasang dari cookie oleh skrip di `<head>`, jadi tidak ada kilatan putih saat memuat. |
+| <img src="docs/screenshots/08-mobile.png" alt="Tampilan ponsel" width="100%"> **Ponsel.** Tabel enam kolom tidak bisa dipakai di lapangan, jadi di bawah breakpoint `md` ia berganti menjadi kartu. | <img src="docs/screenshots/09-geofence.png" alt="Halaman geofence" width="100%"> **Bagian B, hidup.** Halaman `/geofence` menjalankan `evaluateCheckIn()` yang sama persis dengan yang diuji 36 unit test. |
+
+<img src="docs/screenshots/01-login.png" alt="Halaman masuk" width="420"> **Masuk.** Daftar akun demo hanya dirender saat `import.meta.env.DEV` — Vite membuangnya dari bundel produksi, bukan sekadar menyembunyikannya.
 
 ---
 
