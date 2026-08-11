@@ -52,24 +52,25 @@ const legend = computed(() =>
 </script>
 
 <template>
-  <div class="space-y-4">
-    <ul
-      data-cy="slot-grid"
-      class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6"
-      :class="stale ? 'opacity-70' : ''"
-    >
-      <li
-        v-for="slot in slots"
-        :key="slot.slotNo"
-        class="rounded-xl border p-3 transition-colors"
-        :class="STATES[slot.state].classes"
+  <div class="flex flex-col gap-3.5">
+    <!-- Tata letaknya mengikuti susunan fisik cabinet (§12.7): dua kolom, enam
+         baris, di dalam sebuah "badan" cabinet. Grid 6×2 tidak ada di dunia
+         nyata, dan setiap kali teknisi melihatnya ia harus menerjemahkan nomor
+         di layar menjadi posisi di pintu. Sekarang nomornya sama posisinya. -->
+    <div class="rounded-xl border border-border-raised bg-panel-deep p-2.5">
+      <ul
+        data-cy="slot-grid"
+        class="grid grid-cols-2 gap-1.5"
+        :class="stale ? 'opacity-70' : ''"
       >
-        <div class="flex items-center justify-between">
-          <span class="font-mono text-xs font-medium opacity-70">
-            #{{ String(slot.slotNo).padStart(2, '0') }}
-          </span>
+        <li
+          v-for="slot in slots"
+          :key="slot.slotNo"
+          class="flex items-center gap-[9px] rounded-lg border p-[8px_9px] transition-colors"
+          :class="STATES[slot.state].classes"
+        >
           <svg
-            class="size-4"
+            class="size-4 shrink-0"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -80,33 +81,46 @@ const legend = computed(() =>
           >
             <path :d="STATES[slot.state].icon" />
           </svg>
-        </div>
 
-        <p class="mt-2 text-sm font-medium">{{ STATES[slot.state].label }}</p>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-baseline justify-between gap-2">
+              <span class="font-mono text-[11px] font-semibold opacity-75">
+                #{{ String(slot.slotNo).padStart(2, '0') }}
+              </span>
+              <!-- SOC null berarti tidak ada baterai. Merendernya sebagai 0%
+                   akan melaporkan "baterai habis" untuk lubang yang sebenarnya
+                   kosong — dua kondisi yang menuntut tindakan ops berbeda. -->
+              <span v-if="slot.soc !== null" class="text-[13px] font-bold tabular-nums">
+                {{ slot.soc }}%
+              </span>
+            </div>
 
-        <!-- SOC null berarti tidak ada baterai. Merendernya sebagai 0% akan
-             melaporkan "baterai habis" untuk lubang yang sebenarnya kosong —
-             dua kondisi yang menuntut tindakan ops berbeda. -->
-        <template v-if="slot.soc !== null">
-          <div class="mt-2 flex items-center gap-2">
-            <div class="h-1 flex-1 overflow-hidden rounded-full bg-current/20">
+            <div
+              v-if="slot.soc !== null"
+              class="mt-1 h-[3px] overflow-hidden rounded-full bg-current/20"
+            >
               <div class="h-full rounded-full bg-current" :style="{ width: `${slot.soc}%` }" />
             </div>
-            <span class="text-xs font-medium tabular-nums">{{ slot.soc }}%</span>
-          </div>
-          <p class="mt-1.5 truncate font-mono text-[10px] opacity-60" :title="slot.batteryId ?? ''">
-            {{ slot.batteryId }}
-          </p>
-        </template>
-        <p v-else class="mt-2 text-xs opacity-60">Tidak ada baterai</p>
-      </li>
-    </ul>
 
-    <ul class="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted">
+            <p class="mt-1 truncate text-[10px] leading-[1.3] opacity-70">
+              <template v-if="slot.batteryId">
+                {{ STATES[slot.state].label }} ·
+                <span class="font-mono">{{ slot.batteryId }}</span>
+              </template>
+              <template v-else>{{ STATES[slot.state].label }} · tidak ada baterai</template>
+            </p>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <ul class="flex flex-wrap gap-x-3.5 gap-y-1.5 text-xs text-label">
       <li v-for="item in legend" :key="item.state" class="flex items-center gap-1.5">
-        <span class="size-2 rounded-full border" :class="item.classes" aria-hidden="true" />
+        <span class="size-[9px] rounded-[2px] border" :class="item.classes" aria-hidden="true" />
         {{ item.label }}
-        <span class="tabular-nums opacity-70">{{ item.count }}</span>
+        <span class="tabular-nums" :class="item.count === 0 ? 'text-dim' : ''">
+          {{ item.count }}
+        </span>
       </li>
     </ul>
   </div>

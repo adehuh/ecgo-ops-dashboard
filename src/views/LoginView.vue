@@ -26,6 +26,15 @@ const fieldErrors = ref<Record<string, string>>({})
  */
 const showDemoAccounts = import.meta.env.DEV
 
+/**
+ * Tombol "Tampilkan" untuk password.
+ *
+ * Bukan kemudahan belaka: password manager dan pengetikan di ponsel sama-sama
+ * sering menghasilkan satu huruf yang salah, dan tanpa cara melihatnya pengguna
+ * hanya bisa menghapus semuanya lalu mengulang. Defaultnya tetap tersembunyi.
+ */
+const revealPassword = ref(false)
+
 const DEMO_ACCOUNTS = [
   { email: 'admin@ecgo.test', password: 'ops-admin-2026', label: 'Admin · semua cabang' },
   { email: 'kemayoran@ecgo.test', password: 'ops-kemayoran-2026', label: 'Supervisor · Kemayoran, Sunter' },
@@ -83,7 +92,10 @@ async function submit() {
         </div>
       </div>
 
-      <form class="card space-y-4 p-5" novalidate @submit.prevent="submit">
+      <!-- Bayangan kartu DIPERTAHANKAN di sini (§ "Shadows" handoff): layar ini
+           hanya punya satu permukaan, jadi bayangannya mengangkat — bukan
+           menambah derau seperti pada enam belas kartu di papan triage. -->
+      <form class="card flex flex-col gap-3.5 rounded-xl p-5" novalidate @submit.prevent="submit">
         <div
           v-if="failure"
           class="rounded-lg border border-danger/45 bg-danger/16 px-3.5 py-2.5 text-sm text-danger-tint"
@@ -92,8 +104,11 @@ async function submit() {
           {{ failure }}
         </div>
 
-        <label class="block space-y-1.5">
-          <span class="text-xs font-medium tracking-wide text-muted uppercase">Email</span>
+        <!-- Label sentence-case, bukan micro-label kapital. Pada formulir dua
+             field, huruf besar semua adalah hiasan: tidak ada yang perlu
+             dipindai, dan ia justru memperlambat baca. -->
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-semibold text-soft">Email</span>
           <input
             v-model="email"
             type="email"
@@ -101,41 +116,63 @@ async function submit() {
             autocomplete="username"
             required
             :aria-invalid="Boolean(fieldErrors.email)"
-            class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-sm focus:border-accent-ink focus:outline-none"
+            class="w-full rounded-[9px] border border-border-raised bg-surface-2 px-3 py-[11px] text-sm focus:border-accent-ink focus:outline-none"
             :class="fieldErrors.email ? 'border-danger' : ''"
           >
-          <span v-if="fieldErrors.email" class="block text-xs text-danger">{{ fieldErrors.email }}</span>
+          <span v-if="fieldErrors.email" class="mt-1 block text-xs text-danger">
+            {{ fieldErrors.email }}
+          </span>
         </label>
 
-        <label class="block space-y-1.5">
-          <span class="text-xs font-medium tracking-wide text-muted uppercase">Password</span>
+        <label class="block">
+          <span class="mb-1.5 flex items-baseline justify-between gap-2">
+            <span class="text-xs font-semibold text-soft">Password</span>
+            <button
+              type="button"
+              class="text-[11px] text-label transition-colors hover:text-text"
+              :aria-pressed="revealPassword"
+              @click="revealPassword = !revealPassword"
+            >
+              {{ revealPassword ? 'Sembunyikan' : 'Tampilkan' }}
+            </button>
+          </span>
           <input
             v-model="password"
-            type="password"
+            :type="revealPassword ? 'text' : 'password'"
             name="password"
             autocomplete="current-password"
             required
             :aria-invalid="Boolean(fieldErrors.password)"
-            class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-sm focus:border-accent-ink focus:outline-none"
+            class="w-full rounded-[9px] border border-border-raised bg-surface-2 px-3 py-[11px] text-sm focus:border-accent-ink focus:outline-none"
             :class="fieldErrors.password ? 'border-danger' : ''"
           >
-          <span v-if="fieldErrors.password" class="block text-xs text-danger">{{ fieldErrors.password }}</span>
+          <span v-if="fieldErrors.password" class="mt-1 block text-xs text-danger">
+            {{ fieldErrors.password }}
+          </span>
         </label>
 
         <button
           type="submit"
           :disabled="pending"
-          class="w-full rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-contrast transition-opacity disabled:opacity-60"
+          class="w-full rounded-lg bg-accent px-4 py-3 text-sm font-semibold text-accent-contrast transition-opacity disabled:opacity-60"
         >
           {{ pending ? 'Memeriksa…' : 'Masuk' }}
         </button>
       </form>
 
-      <section v-if="showDemoAccounts" class="mt-6">
-        <p class="mb-2 text-xs font-medium tracking-wide text-faint uppercase">
-          Akun demo · hanya di mode pengembangan
-        </p>
-        <ul class="space-y-1.5">
+      <!-- Empat tombol akun yang selalu terbuka lebih berat daripada formulirnya
+           sendiri, dan yang pertama kali dilihat orang di layar masuk seharusnya
+           adalah cara masuk. Dilipat ke dalam <details>; penjaga dev-only tetap,
+           jadi Vite tetap membuang seluruh blok ini dari bundel produksi. -->
+      <details v-if="showDemoAccounts" class="mt-4 rounded-[10px] border border-border px-3 py-2.5">
+        <!-- `list-none` menghapus penanda di Firefox; WebKit butuh pseudo-element
+             tersendiri, jadi keduanya dipasang. -->
+        <summary
+          class="cursor-pointer list-none text-xs font-medium text-label [&::-webkit-details-marker]:hidden"
+        >
+          Akun demo · hanya mode pengembangan
+        </summary>
+        <ul class="mt-2.5 flex flex-col gap-1.5">
           <li v-for="account in DEMO_ACCOUNTS" :key="account.email">
             <button
               type="button"
@@ -147,7 +184,7 @@ async function submit() {
             </button>
           </li>
         </ul>
-      </section>
+      </details>
     </div>
   </div>
 </template>

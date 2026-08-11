@@ -12,8 +12,17 @@ describe('Optimistic UI: tandai perawatan', () => {
 
   beforeEach(() => {
     cy.masuk()
-    cy.visit('/cabinets?status=ONLINE')
-    cy.get('table tbody tr td:nth-child(2) a')
+
+    // Sortir bawaan kini "paling bermasalah", jadi baris pertama dari
+    // ?status=ONLINE adalah cabinet ONLINE yang PALING rusak — sering kali yang
+    // 0 slot siap, yang kondisinya berbunyi "0 slot siap ditukar", bukan
+    // "Online · sehat". Spec ini menguji optimistic UI, bukan peringkat
+    // keparahan, jadi ia butuh titik awal yang pasti: cabinet yang benar-benar
+    // sehat, supaya frasa sebelum dan sesudah toggle bisa diprediksi.
+    cy.visit('/cabinets?status=ONLINE&sort=severity&dir=asc')
+
+    cy.contains('table tbody tr', 'Online · sehat')
+      .find('td:nth-child(2) a')
       .first()
       .then(($a) => {
         kode = $a.text().trim()
@@ -36,7 +45,7 @@ describe('Optimistic UI: tandai perawatan', () => {
 
     cy.get('[data-cy=toggle-maintenance]').click()
 
-    // Sebelum @simpan selesai: badge sudah "Perawatan".
+    // Sebelum @simpan selesai: pil kondisi sudah berbunyi "Perawatan".
     cy.get('header').should('exist')
     cy.contains('span', 'Perawatan').should('be.visible')
 
@@ -70,8 +79,8 @@ describe('Optimistic UI: tandai perawatan', () => {
     cy.get('[data-cy=toggle-maintenance]').click()
     cy.wait('@gagal')
 
-    // Rollback: kembali ke Online, bukan tertinggal di Perawatan.
-    cy.contains('span', 'Online').should('be.visible')
+    // Rollback: kembali ke kondisi semula, bukan tertinggal di Perawatan.
+    cy.contains('span', 'Online · sehat').should('be.visible')
     cy.contains('span', 'Perawatan').should('not.exist')
 
     // Dan alasannya datang dari server, bukan "terjadi kesalahan".
