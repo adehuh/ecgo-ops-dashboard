@@ -11,3 +11,6 @@ cypress/downloads
 design_handoff_ops_triage
 TEST-Fullstack-Developer-ECGO.docx
 TEST-Fullstack-Developer-ECGO-JAWABAN-Ade-Rusmana.docx
+
+# Vercel CLI menyimpan tautan project lokal di sini (berisi id project/org).
+.vercel

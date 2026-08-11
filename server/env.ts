@@ -18,6 +18,27 @@ export const env = {
 
   isProduction: process.env.NODE_ENV === 'production',
 
+  /**
+   * Berjalan sebagai fungsi serverless (Vercel), bukan proses yang mendengarkan port.
+   *
+   * Dipakai memilih ukuran pool: satu proses panjang boleh memegang 10 koneksi,
+   * tapi platform serverless menjalankan BANYAK instance sekaligus, dan 10
+   * koneksi per instance akan menghabiskan jatah koneksi Postgres jauh sebelum
+   * trafiknya sendiri terasa berat.
+   */
+  isServerless: Boolean(process.env.VERCEL),
+
+  /**
+   * Siapa yang boleh dipercaya sebagai proxy untuk `req.ip`.
+   *
+   * Default 'loopback': mempercayai X-Forwarded-For dari sembarang sumber
+   * berarti penyerang bisa mengarang IP dan melewati rate limit login dengan
+   * satu header. Di Vercel, header itu dipasang oleh proxy platform yang berada
+   * tepat di depan fungsi ini, jadi satu hop boleh dipercaya — dan itu
+   * dinyatakan lewat env, bukan dilonggarkan diam-diam untuk semua lingkungan.
+   */
+  trustProxy: process.env.TRUST_PROXY ?? (process.env.VERCEL ? 1 : 'loopback'),
+
   /** Zona waktu tampilan tim ops. Penyimpanan selalu UTC. */
   timeZone: 'Asia/Jakarta',
 } as const

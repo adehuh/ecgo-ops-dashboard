@@ -17,14 +17,23 @@ const failure = ref<string | null>(null)
 const fieldErrors = ref<Record<string, string>>({})
 
 /**
- * Akun demo hanya ditampilkan saat pengembangan.
+ * Akun demo: mode pengembangan, ATAU deployment demo yang meminta secara eksplisit.
  *
- * `import.meta.env.DEV` diganti konstanta saat build, jadi Vite membuang blok
- * ini seluruhnya dari bundel produksi — bukan sekadar menyembunyikannya dengan
- * CSS. Kredensial yang "disembunyikan" di halaman login tetap ada di dalam
- * berkas JavaScript yang bisa diunduh siapa pun.
+ * Keduanya konstanta yang diganti saat build, jadi ketika tidak satu pun aktif
+ * Vite membuang blok ini SELURUHNYA dari bundel — bukan sekadar
+ * menyembunyikannya dengan CSS. Kredensial yang "disembunyikan" di halaman login
+ * tetap ada di dalam berkas JavaScript yang bisa diunduh siapa pun.
+ *
+ * `VITE_DEMO_ACCOUNTS` sengaja opt-in dan sengaja terpisah dari `DEV`: build
+ * produksi biasa tetap membuang blok ini, jadi klaim di README tetap benar.
+ * Yang menyalakannya hanya deployment demo untuk penilai — di mana keempat
+ * kredensial itu memang sudah tercetak di README §2, sehingga menyembunyikannya
+ * dari layar tidak menambah keamanan apa pun.
+ *
+ * JANGAN pasang variabel ini pada deployment yang memuat data sungguhan.
  */
-const showDemoAccounts = import.meta.env.DEV
+const showDemoAccounts =
+  import.meta.env.DEV || import.meta.env.VITE_DEMO_ACCOUNTS === '1'
 
 /**
  * Tombol "Tampilkan" untuk password.
