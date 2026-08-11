@@ -19,7 +19,7 @@ const ONE_YEAR = 60 * 60 * 24 * 365
 function readCookie(): ThemeName {
   const match = document.cookie.match(/(?:^|;\s*)ecgo-theme=(light|dark)/)
   // Default gelap: dashboard ini dipandangi berjam-jam, sering di ruang kontrol
-  // yang redup.
+  // yang redup. Terang hanya kalau dipilih.
   return match?.[1] === 'light' ? 'light' : 'dark'
 }
 

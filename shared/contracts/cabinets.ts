@@ -70,6 +70,25 @@ export const cabinetCodeParamSchema = z
   // berarti tebakan asal ditolak sebagai 400 sebelum menyentuh database.
   .regex(/^[A-Za-z0-9-]+$/, 'Kode cabinet hanya boleh huruf, angka, dan tanda hubung')
 
+/**
+ * Perubahan status yang boleh dilakukan MANUSIA.
+ *
+ * Sengaja hanya ONLINE dan MAINTENANCE. OFFLINE tidak ada di daftar ini karena
+ * OFFLINE adalah keadaan yang DILAPORKAN perangkat — cabinet tidak menjadi
+ * kembali online karena seseorang mengeklik tombol, ia menjadi online karena
+ * heartbeat-nya kembali. Membiarkan operator menulis OFFLINE lewat API berarti
+ * membiarkan dashboard berbohong tentang perangkat kerasnya sendiri.
+ * (Lihat README §7.5 — status dilaporkan perangkat, "basi" diturunkan.)
+ */
+export const cabinetStatusPatchSchema = z.object({
+  status: z.enum(['ONLINE', 'MAINTENANCE'], {
+    message: 'Status hanya boleh diubah ke ONLINE atau MAINTENANCE',
+  }),
+})
+
+export type CabinetStatusPatch = z.infer<typeof cabinetStatusPatchSchema>
+export type CabinetStatusPatchResponse = { data: { code: string; status: CabinetStatus } }
+
 // ---------------------------------------------------------------------------
 // Bentuk respons
 // ---------------------------------------------------------------------------

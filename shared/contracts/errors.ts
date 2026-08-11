@@ -10,6 +10,7 @@ export const API_ERROR_CODES = [
   'VALIDATION_ERROR',
   'UNAUTHORIZED',
   'NOT_FOUND',
+  'CONFLICT',
   'TOO_MANY_REQUESTS',
   'INTERNAL',
 ] as const
@@ -36,6 +37,7 @@ export const HTTP_STATUS_BY_CODE: Record<ApiErrorCode, number> = {
   VALIDATION_ERROR: 400,
   UNAUTHORIZED: 401,
   NOT_FOUND: 404,
+  CONFLICT: 409,
   TOO_MANY_REQUESTS: 429,
   INTERNAL: 500,
 }

@@ -14,11 +14,14 @@
     <!--
       Tema dipasang SEBELUM CSS dan sebelum aplikasi Vue di-mount.
 
-      Ini yang menggantikan keunggulan SSR: pada SPA, HTML awal dikirim polos dan
-      Vue baru berjalan setelah bundelnya diunduh. Kalau kelas tema baru dipasang
-      di dalam komponen, pengguna akan melihat kilatan putih dulu setiap kali
-      memuat halaman. Skrip sinkron kecil di <head> berjalan sebelum paint
-      pertama, jadi tidak ada kedipan sama sekali.
+      Pada SPA, HTML awal dikirim polos dan Vue baru berjalan setelah bundelnya
+      diunduh. Kalau kelas tema baru dipasang di dalam komponen, pengguna yang
+      memilih tema gelap akan melihat kilatan terang dulu setiap kali memuat
+      halaman. Skrip sinkron kecil di <head> berjalan sebelum paint pertama,
+      jadi tidak ada kedipan sama sekali.
+
+      Default-nya GELAP: dashboard ini dipandangi berjam-jam, sering di ruang
+      kontrol yang redup. Tema terang tetap tersedia lewat tombol di header.
 
       Dibuat sekecil mungkin dan tanpa dependensi — apa pun di sini menghambat
       render pertama.
@@ -27,8 +30,6 @@
       ;(function () {
         try {
           var m = document.cookie.match(/(?:^|;\s*)ecgo-theme=(light|dark)/)
-          // Default gelap: dashboard ini dipandangi berjam-jam, sering di ruang
-          // kontrol yang redup.
           if (!m || m[1] === 'dark') document.documentElement.classList.add('dark')
         } catch (e) {
           document.documentElement.classList.add('dark')

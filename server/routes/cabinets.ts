@@ -2,17 +2,19 @@ import { Router } from 'express'
 import {
   cabinetCodeParamSchema,
   cabinetListQuerySchema,
+  cabinetStatusPatchSchema,
   type CabinetDetail,
   type CabinetDetailResponse,
   type CabinetListItem,
   type CabinetListResponse,
   type CabinetSlot,
+  type CabinetStatusPatchResponse,
   type HourlyBucket,
   type RecentSwap,
 } from '../../shared/contracts/cabinets.js'
 import { branchScopeClause, requireSession, sessionOf } from '../auth.js'
 import { sql, staleMinutes } from '../db.js'
-import { notFound, ok, parseOrThrow } from '../http.js'
+import { ApiError, notFound, ok, parseOrThrow } from '../http.js'
 
 export const cabinetsRouter = Router()
 
@@ -372,4 +374,53 @@ cabinetsRouter.get('/:code', async (req, res) => {
       ),
     },
   })
+})
+
+/**
+ * PATCH /api/cabinets/:code/status — tandai cabinet masuk atau keluar perawatan.
+ *
+ * Ini satu-satunya endpoint yang MENULIS, dan ia sengaja sempit: hanya berpindah
+ * antara ONLINE dan MAINTENANCE. Alasannya ada di kontraknya — OFFLINE dilaporkan
+ * perangkat, bukan diputuskan orang.
+ *
+ * Cabinet yang sedang OFFLINE ditolak dengan 409, bukan 400: requestnya sendiri
+ * sah, keadaan dunianya yang belum memungkinkan. Bedanya penting bagi client —
+ * 400 berarti "perbaiki requestmu", 409 berarti "coba lagi setelah keadaannya
+ * berubah".
+ */
+cabinetsRouter.patch('/:code/status', async (req, res) => {
+  const session = sessionOf(req)
+  const code = parseOrThrow(cabinetCodeParamSchema, req.params.code, 'Kode cabinet')
+  const { status } = parseOrThrow(cabinetStatusPatchSchema, req.body, 'Status cabinet')
+  const scopeClause = branchScopeClause(session)
+
+  const [current] = await sql<{ status: CabinetDetail['status'] }[]>`
+    SELECT c.status FROM cabinets c WHERE c.code = ${code} AND ${scopeClause}
+  `
+
+  // Di luar ruang lingkup dan tidak ada sama sekali menghasilkan jawaban yang
+  // sama, seperti pada endpoint baca.
+  if (!current) throw notFound(`Cabinet dengan kode "${code}" tidak ditemukan`)
+
+  if (current.status === 'OFFLINE') {
+    throw new ApiError(
+      'CONFLICT',
+      'Cabinet sedang OFFLINE. Statusnya akan pulih sendiri saat heartbeat kembali, dan tidak bisa diubah dari sini.',
+    )
+  }
+
+  const [updated] = await sql<{ code: string; status: CabinetDetail['status'] }[]>`
+    UPDATE cabinets
+       SET status = ${status}::cabinet_status
+     WHERE code = ${code}
+       -- Dijaga sekali lagi di UPDATE, bukan hanya pada SELECT di atas: dua
+       -- query terpisah berarti ada jeda di antaranya, dan ruang lingkup tidak
+       -- boleh bergantung pada jeda itu.
+       AND status <> 'OFFLINE'
+    RETURNING code, status
+  `
+
+  if (!updated) throw new ApiError('CONFLICT', 'Status cabinet berubah sebelum permintaan ini selesai. Muat ulang lalu coba lagi.')
+
+  ok<CabinetStatusPatchResponse>(res, { data: { code: updated.code, status: updated.status } })
 })

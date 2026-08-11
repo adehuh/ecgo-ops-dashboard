@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SlotGrid from '@/components/SlotGrid.vue'
 import StateMessage from '@/components/StateMessage.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import SwapChart from '@/components/SwapChart.vue'
 import TimeAgo from '@/components/TimeAgo.vue'
+import { apiFetch, describeApiError } from '@/api/client'
 import { useApi } from '@/composables/useApi'
 import {
   formatDate,
@@ -14,7 +15,11 @@ import {
   formatFull,
   formatNumber,
 } from '@/utils/format'
-import type { CabinetDetailResponse } from '@shared/contracts/cabinets'
+import type {
+  CabinetDetailResponse,
+  CabinetStatus,
+  CabinetStatusPatchResponse,
+} from '@shared/contracts/cabinets'
 
 const route = useRoute()
 const router = useRouter()
@@ -99,6 +104,66 @@ const slotsUpdatedAt = computed<string | null>(() => {
   return slots.reduce((latest, s) => (s.updatedAt > latest ? s.updatedAt : latest), slots[0]!.updatedAt)
 })
 
+// ---------------------------------------------------------------------------
+// Optimistic UI — tandai cabinet masuk / keluar perawatan
+// ---------------------------------------------------------------------------
+
+/**
+ * Di sini saya memilih OPTIMISTIC, dan itu tidak bertentangan dengan jawaban A6
+ * yang memilih pessimistic untuk persetujuan klaim garansi — justru mengikutinya.
+ *
+ * Aturan yang saya tulis di A6: optimistic layak ketika aksinya sering, murah,
+ * dan bisa dibatalkan sendiri oleh pengguna; pessimistic ketika aksinya jarang,
+ * berkonsekuensi uang, dan tidak bisa ditarik kembali. Menandai cabinet masuk
+ * perawatan adalah yang pertama — teknisi melakukannya sambil berjalan di depan
+ * cabinet, dan salah klik diperbaiki dengan satu klik lagi. Menunggu 300 ms
+ * sambil layar diam terasa seperti tombolnya rusak.
+ *
+ * Yang tetap wajib ada pada optimistic: rollback yang benar-benar mengembalikan
+ * keadaan, dan alasan penolakan dari server yang ditampilkan apa adanya.
+ */
+const pendingStatus = ref<CabinetStatus | null>(null)
+const statusError = ref<string | null>(null)
+const statusSaving = ref(false)
+
+/** Yang dilihat pengguna: nilai optimistic kalau ada, kalau tidak nilai server. */
+const shownStatus = computed<CabinetStatus | null>(
+  () => pendingStatus.value ?? cabinet.value?.status ?? null,
+)
+
+const canToggleMaintenance = computed(() => shownStatus.value !== 'OFFLINE')
+
+const toggleLabel = computed(() =>
+  shownStatus.value === 'MAINTENANCE' ? 'Selesai perawatan' : 'Tandai perawatan',
+)
+
+async function toggleMaintenance() {
+  const current = shownStatus.value
+  if (!current || current === 'OFFLINE' || statusSaving.value) return
+
+  const next: CabinetStatus = current === 'MAINTENANCE' ? 'ONLINE' : 'MAINTENANCE'
+
+  statusError.value = null
+  statusSaving.value = true
+  pendingStatus.value = next // ← optimistic: layar berubah sekarang juga
+
+  try {
+    await apiFetch<CabinetStatusPatchResponse>(
+      `/api/cabinets/${encodeURIComponent(code.value)}/status`,
+      { method: 'PATCH', body: { status: next } },
+    )
+    // Ambil ulang supaya sisa halaman (KPI, badge basi) ikut konsisten, baru
+    // lepas nilai optimistic-nya.
+    await refresh()
+  } catch (error) {
+    // Rollback: kembalikan ke keadaan sebelum klik, lalu katakan kenapa.
+    statusError.value = describeApiError(error).message
+  } finally {
+    pendingStatus.value = null
+    statusSaving.value = false
+  }
+}
+
 const SWAP_STATUS = { SUCCESS: 'Berhasil', FAILED: 'Gagal' } as const
 
 const backToList = () => router.push('/cabinets')
@@ -157,17 +222,38 @@ const backToList = () => router.push('/cabinets')
           </p>
         </div>
 
-        <div class="flex flex-col items-end gap-1.5">
+        <div class="flex flex-col items-end gap-2">
           <StatusBadge
-            :status="cabinet.status"
-            :is-stale="cabinet.isStale"
-            :never-reported="cabinet.lastHeartbeatAt === null"
+            v-if="shownStatus"
+            :status="shownStatus"
+            :is-stale="cabinet.isStale && pendingStatus === null"
+            :never-reported="cabinet.lastHeartbeatAt === null && pendingStatus === null"
           />
           <p class="text-xs text-muted">
             Heartbeat <TimeAgo :iso="cabinet.lastHeartbeatAt" />
           </p>
+
+          <button
+            v-if="canToggleMaintenance"
+            type="button"
+            data-cy="toggle-maintenance"
+            class="rounded-lg border border-border px-3 py-2 text-xs font-medium transition-colors hover:bg-surface-2 disabled:opacity-60"
+            :disabled="statusSaving"
+            @click="toggleMaintenance"
+          >
+            {{ toggleLabel }}
+          </button>
         </div>
       </div>
+
+      <p
+        v-if="statusError"
+        class="rounded-lg border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-sm text-danger"
+        role="alert"
+        data-cy="status-error"
+      >
+        {{ statusError }}
+      </p>
 
       <div
         v-if="staleness"

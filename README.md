@@ -30,6 +30,38 @@ Kandidat: **Ade Rusmana** · adeforgaming@gmail.com
 Bagian B1 juga bisa dicoba langsung di browser pada halaman **`/geofence`** — halaman
 itu meng-import modul yang sama persis yang diuji unit test, bukan salinannya.
 
+### Pemenuhan requirement Bagian D
+
+Diperiksa terhadap aplikasi yang berjalan, bukan dari ingatan.
+
+| Aspek (dari soal) | Status | Bukti |
+| --- | --- | --- |
+| **Stack** — Next.js 15 + TS + Tailwind + PostgreSQL | ⚠️ **menyimpang pada framework** | TypeScript strict ✅ · Tailwind 4.3 ✅ · PostgreSQL 16 ✅ · **Next.js → Vue 3 SPA + Express 5**, dibela di §3 |
+| **Seed data** — min 50 cabinet / 600 slot / 20.000 swap / 30 hari / satu perintah | ✅ | 50 · 600 · **22.000** · 30 hari · `npm run seed` |
+| **API** — min 2 route handler, Zod, error konsisten | ✅ | 8 handler · 15 skema Zod · `VALIDATION_ERROR` 400 · `UNAUTHORIZED` 401 · `NOT_FOUND` 404 · `CONFLICT` 409 · `TOO_MANY_REQUESTS` 429 · `INTERNAL` 500 |
+| **UI state** — loading, empty, error | ✅ | ketiganya di kedua halaman; empty dibedakan "tidak cocok filter" vs "belum ada data" |
+| **Query** — nol N+1, agregasi di database | ✅ | daftar = **1 query** (2 CTE + join, `count(*) OVER ()`); detail = 4 query paralel; nol `.reduce()` atas baris swap di server; `EXPLAIN ANALYZE` di §6 |
+| **README** — setup, asumsi, trade-off, belum selesai, AI tool | ✅ | §2 · §7 · §8 · §9 · §10 |
+| **Git** — commit bertahap, pesan bermakna | ✅ | 13 commit berlapis, tidak ada "initial commit" tunggal |
+
+Satu baris menyimpang, dan hanya pada satu kata: **framework**. Tiga syarat lain di
+baris Stack terpenuhi apa adanya. Alasan dan risikonya ada di §3 — ringkasnya, soal
+memuat dua kalimat yang bertabrakan, dan saya memilih kalimat yang menyebut Vue dan
+Express secara nama karena Sesi 3 menuntut saya menjelaskan tiap baris tanpa AI.
+
+### Bonus yang dikerjakan
+
+Soal menandai ini opsional dan hanya dinilai kalau yang wajib sudah lengkap.
+
+| Bonus | Status | Di mana |
+| --- | --- | --- |
+| **Unit / E2E test** | ✅ keduanya | 86 test Vitest (36 geofence · 24 kontrak API · 26 auth) + **23 test Cypress** end-to-end |
+| **Optimistic UI** | ✅ | tombol "Tandai perawatan" di halaman detail — lihat §7.13 |
+| **Skeleton loading** | ✅ | skeleton berbentuk sama dengan tabel yang menggantikannya, jumlah barisnya mengikuti `pageSize` |
+| **Dark mode** | ✅ | default gelap, tombol di header, dipasang dari cookie sebelum paint pertama |
+| **Auto-refresh** | ✅ | polling 30 detik, berhenti saat tab tidak terlihat |
+| Deploy ke Vercel | ❌ | belum — lihat §9 |
+
 ### Tampilan
 
 Bukan tangkapan layar untuk setiap fitur — hanya yang **membuktikan sebuah keputusan**
@@ -41,6 +73,7 @@ yang saya tulis di §7. Semuanya diambil dari aplikasi yang berjalan, bukan mock
 | <img src="docs/screenshots/06-scoped-supervisor.png" alt="Tampilan supervisor" width="100%"> **Ruang lingkup cabang.** Supervisor Kemayoran melihat **10** cabinet, bukan 50 — termasuk KPI di atasnya. Ruang lingkupnya ditulis permanen di header supaya tidak ada yang salah membaca angka ini sebagai angka armada. | <img src="docs/screenshots/07-cross-branch-404.png" alt="404 lintas cabang" width="100%"> **404, bukan 403** (§7.12). Membuka cabinet milik cabang lain secara langsung menghasilkan jawaban yang tidak bisa dibedakan dari "cabinet tidak ada". |
 | <img src="docs/screenshots/05-empty.png" alt="Empty state" width="100%"> **Empty state.** Dibedakan dari error dan dari "belum ada data", dan menawarkan jalan keluar alih-alih jalan buntu. | <img src="docs/screenshots/03-list-light.png" alt="Tema terang" width="100%"> **Tema terang.** Dipasang dari cookie oleh skrip di `<head>`, jadi tidak ada kilatan putih saat memuat. |
 | <img src="docs/screenshots/08-mobile.png" alt="Tampilan ponsel" width="100%"> **Ponsel.** Tabel enam kolom tidak bisa dipakai di lapangan, jadi di bawah breakpoint `md` ia berganti menjadi kartu. | <img src="docs/screenshots/09-geofence.png" alt="Halaman geofence" width="100%"> **Bagian B, hidup.** Halaman `/geofence` menjalankan `evaluateCheckIn()` yang sama persis dengan yang diuji 36 unit test. |
+| <img src="docs/screenshots/10-optimistic-maintenance.png" alt="Cabinet ditandai perawatan" width="100%"> **Optimistic UI** (§7.13). Badge dan tombol berbalik seketika saat diklik, sebelum server menjawab; kalau server menolak, keadaannya dikembalikan beserta alasannya. Ada test Cypress khusus untuk rollback-nya. | |
 
 <img src="docs/screenshots/01-login.png" alt="Halaman masuk" width="420"> **Masuk.** Daftar akun demo hanya dirender saat `import.meta.env.DEV` — Vite membuangnya dari bundel produksi, bukan sekadar menyembunyikannya.
 
@@ -81,7 +114,8 @@ hasilnya **404**, bukan 403. Alasannya di §7.
 ### Perintah lain
 
 ```bash
-npm test            # 86 test (36 geofence + 24 kontrak API + 26 auth)
+npm test            # 86 test Vitest (36 geofence + 24 kontrak API + 26 auth)
+npm run test:e2e    # 23 test Cypress end-to-end (aplikasi harus sedang berjalan)
 npm run typecheck   # vue-tsc untuk client, tsc untuk server
 npm run build       # dist/client (SPA) + dist/server (API)
 npm start           # produksi: satu proses, satu port, API + SPA
@@ -383,6 +417,17 @@ bahwa objeknya ADA, sehingga endpoint berubah menjadi alat menghitung armada cab
 lain. Dengan 404, "tidak ada" dan "bukan milikmu" tidak bisa dibedakan dari luar —
 dan ada test yang membandingkan kedua responsnya.
 
+**7.13 Optimistic UI dipakai di sini, pessimistic di jawaban A6 — dan itu konsisten.**
+Aturan yang saya tulis di A6: optimistic layak ketika aksinya sering, murah, dan bisa
+dibatalkan sendiri oleh pengguna; pessimistic ketika aksinya jarang, berkonsekuensi
+uang, dan tidak bisa ditarik kembali. Menandai cabinet masuk perawatan adalah yang
+pertama — teknisi melakukannya sambil berdiri di depan cabinet, dan salah klik
+diperbaiki dengan satu klik lagi. Persetujuan klaim garansi di A6 adalah yang kedua.
+Endpoint-nya sengaja sempit: hanya ONLINE ↔ MAINTENANCE. **OFFLINE tidak bisa ditulis
+manusia**, karena OFFLINE dilaporkan perangkat (§7.5) — cabinet tidak menjadi online
+karena seseorang mengeklik tombol. Cabinet yang sedang OFFLINE dijawab **409**, bukan
+400: requestnya sah, keadaan dunianya yang belum memungkinkan.
+
 ---
 
 ## 8. Trade-off lain yang saya ambil sadar
@@ -424,13 +469,12 @@ teal `#236057` — disampel dari file aset resmi, bukan dikira-kira.
 
 Saya menulisnya di sini alih-alih berharap tidak ketahuan.
 
-1. **Tidak ada E2E test otomatis.** Ada 36 unit test, 24 test kontrak API, dan 26 test
-   auth — tapi tidak ada yang mengklik UI di CI. Saya memverifikasinya secara manual
-   dengan Playwright (login, kredensial salah, ruang lingkup, akses lintas cabang,
-   logout, light/dark, mobile) dan tidak menemukan error konsol selain 401/404 yang
-   memang disengaja, tapi itu belum saya jadikan test yang berjalan otomatis.
-2. **Test kontrak dan auth butuh server hidup** dan akan di-skip kalau tidak ada.
-   Idealnya memakai testcontainers supaya berjalan mandiri di CI.
+1. **Test kontrak, auth, dan E2E butuh server hidup.** Yang Vitest di-skip otomatis
+   kalau server tidak ada; Cypress akan gagal. Idealnya memakai testcontainers plus
+   `start-server-and-test` supaya seluruhnya berjalan mandiri di CI.
+2. **Belum ada CI.** Semua gerbang mutu dijalankan manual. `npm run typecheck && npm
+   test && npm run build && npm run test:e2e` sudah cukup sebagai isi workflow-nya —
+   tinggal ditulis.
 3. **Rate limit login hanya per proses.** Harus pindah ke Redis atau gateway sebelum
    ada lebih dari satu instance.
 4. **Belum ada token CSRF.** `SameSite=Lax` sudah menutup POST lintas situs untuk dua
@@ -470,6 +514,8 @@ untuk bagian apa:
 | Auth | Draf sesi dan endpoint | Keputusan scrypt vs argon2, hash boneka, 404-bukan-403, `[] ≠ null` |
 | UI | Draf komponen Vue | Rancangan UX, keputusan aksesibilitas, keputusan bahwa data basi harus terlihat basi |
 | Port Nuxt → Vue+Express | Menjalankan perubahan mekanis | Keputusan pindah, batas apa yang ikut dan tidak |
+| Optimistic UI | Draf komponen dan endpoint | Keputusan optimistic-di-sini vs pessimistic-di-A6, aturan OFFLINE tidak bisa ditulis manusia, 409 vs 400 |
+| Cypress E2E | Draf spec | Memilih apa yang layak diuji di browser dan apa yang cukup di lapisan HTTP |
 | Benchmark & EXPLAIN | Menjalankan | Menafsirkan, dan mengubah jawaban B2 karenanya |
 
 Beberapa hal yang saya temukan dan perbaiki sendiri selama pengerjaan, sebagai bukti

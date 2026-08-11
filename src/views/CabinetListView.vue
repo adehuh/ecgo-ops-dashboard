@@ -157,7 +157,7 @@ const STATUS_LABELS = { ONLINE: 'Online', OFFLINE: 'Offline', MAINTENANCE: 'Pera
             :maxlength="100"
             placeholder="Cari kode cabinet atau cabang…"
             aria-label="Cari kode cabinet atau cabang"
-            class="w-full rounded-lg border border-border bg-surface-2 py-2.5 pr-3 pl-9 text-sm placeholder:text-faint focus:border-accent focus:outline-none"
+            class="w-full rounded-lg border border-border bg-surface-2 py-2.5 pr-3 pl-9 text-sm placeholder:text-faint focus:border-accent-ink focus:outline-none"
           >
         </div>
 
@@ -169,7 +169,7 @@ const STATUS_LABELS = { ONLINE: 'Online', OFFLINE: 'Offline', MAINTENANCE: 'Pera
             class="rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
             :class="
               state.status?.includes(s)
-                ? 'border-accent bg-accent-soft text-accent'
+                ? 'border-accent bg-accent-soft text-accent-ink'
                 : 'border-border text-muted hover:bg-surface-2 hover:text-text'
             "
             :aria-pressed="state.status?.includes(s) ?? false"
@@ -181,7 +181,7 @@ const STATUS_LABELS = { ONLINE: 'Online', OFFLINE: 'Offline', MAINTENANCE: 'Pera
           <select
             :value="state.pageSize"
             aria-label="Jumlah baris per halaman"
-            class="rounded-lg border border-border bg-surface-2 px-2.5 py-2 text-sm text-muted focus:border-accent focus:outline-none"
+            class="rounded-lg border border-border bg-surface-2 px-2.5 py-2 text-sm text-muted focus:border-accent-ink focus:outline-none"
             @change="patch({ pageSize: Number(($event.target as HTMLSelectElement).value) })"
           >
             <option v-for="size in PAGE_SIZES" :key="size" :value="size">{{ size }} / hal</option>
@@ -291,7 +291,7 @@ const STATUS_LABELS = { ONLINE: 'Online', OFFLINE: 'Offline', MAINTENANCE: 'Pera
                 <td class="px-4 py-3">
                   <RouterLink
                     :to="`/cabinets/${cabinet.code}`"
-                    class="font-mono font-medium text-text hover:text-accent hover:underline"
+                    class="font-mono font-medium text-text hover:text-accent-ink-ink hover:underline"
                   >
                     {{ cabinet.code }}
                   </RouterLink>

@@ -101,7 +101,7 @@ async function submit() {
             autocomplete="username"
             required
             :aria-invalid="Boolean(fieldErrors.email)"
-            class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-sm focus:border-accent focus:outline-none"
+            class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-sm focus:border-accent-ink focus:outline-none"
             :class="fieldErrors.email ? 'border-danger' : ''"
           >
           <span v-if="fieldErrors.email" class="block text-xs text-danger">{{ fieldErrors.email }}</span>
@@ -116,7 +116,7 @@ async function submit() {
             autocomplete="current-password"
             required
             :aria-invalid="Boolean(fieldErrors.password)"
-            class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-sm focus:border-accent focus:outline-none"
+            class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 text-sm focus:border-accent-ink focus:outline-none"
             :class="fieldErrors.password ? 'border-danger' : ''"
           >
           <span v-if="fieldErrors.password" class="block text-xs text-danger">{{ fieldErrors.password }}</span>

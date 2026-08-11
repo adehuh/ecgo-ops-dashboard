@@ -37,34 +37,45 @@
   font-display: swap;
 }
 
-/* Light theme is the fallback; dark is what ops actually runs. Both are defined
-   as plain custom properties so the toggle is a single class swap. */
+/* Tema TERANG adalah default, mengikuti situs ECGO sendiri (background putih,
+   hijau sebagai aksen). Tema gelap tetap tersedia lewat tombol di header.
+
+   Hijau dipakai dua peran yang berbeda, dan itu disengaja:
+     --accent      hijau ECGO penuh (#00D95C), untuk ISIAN — tombol, batang
+                   grafik, bar progres. Di atasnya selalu ada teks gelap.
+     --accent-ink  hijau yang lebih tua, untuk hijau sebagai TEKS di latar terang.
+
+   Alasannya kontras, bukan selera: #00D95C di atas putih hanya 1,7:1 — di bawah
+   syarat WCAG AA 4,5:1 untuk teks, jadi tautan hijau di atas putih tidak
+   terbaca. Sebagai isian ia justru sempurna: teks #04150B di atas #00D95C
+   mencapai 9,8:1. Satu warna merek, dua peran, keduanya lolos. */
 :root {
   --ecgo-500: #00d95c;
   --ecgo-600: #47a056;
   --ecgo-800: #236057;
 
-  --bg: #f6f8f7;
+  --bg: #f7f9f8;
   --surface: #ffffff;
-  --surface-2: #eef2f0;
-  --border: #dbe3df;
-  --border-strong: #c2cec8;
-  --text: #0e1614;
-  --text-muted: #5a6b64;
-  --text-faint: #8b9a93;
+  --surface-2: #f0f4f2;
+  --border: #e3e9e6;
+  --border-strong: #c9d4cf;
+  --text: #0b1512;
+  --text-muted: #55665f;
+  --text-faint: #84968e;
 
-  --accent: #0f9d4f;
-  --accent-contrast: #ffffff;
-  --accent-soft: #e3f7ea;
+  --accent: #00d95c;
+  --accent-contrast: #04150b;
+  --accent-ink: #0a7c3e;
+  --accent-soft: #e6faee;
 
-  --ok: #0f9d4f;
-  --warn: #b7791f;
-  --danger: #c53030;
-  --info: #2b6cb0;
-  --neutral: #718096;
+  --ok: #0a7c3e;
+  --warn: #9a6700;
+  --danger: #c2352b;
+  --info: #1f5fa8;
+  --neutral: #667a72;
 
-  --ring: color-mix(in oklab, var(--accent) 55%, transparent);
-  --shadow-card: 0 1px 2px rgb(14 22 20 / 6%), 0 8px 24px -12px rgb(14 22 20 / 12%);
+  --ring: color-mix(in oklab, var(--accent-ink) 55%, transparent);
+  --shadow-card: 0 1px 2px rgb(11 21 18 / 5%), 0 8px 24px -14px rgb(11 21 18 / 10%);
 }
 
 .dark {
@@ -79,6 +90,9 @@
 
   --accent: #00d95c;
   --accent-contrast: #04150b;
+  /* Di latar gelap, hijau merek sudah cukup kontras sebagai teks (7,4:1),
+     jadi kedua peran memakai warna yang sama. */
+  --accent-ink: #00d95c;
   --accent-soft: color-mix(in oklab, #00d95c 14%, transparent);
 
   --ok: #00d95c;
@@ -104,6 +118,7 @@
 
   --color-accent: var(--accent);
   --color-accent-contrast: var(--accent-contrast);
+  --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
 
   --color-ok: var(--ok);
@@ -140,7 +155,7 @@
   /* Visible focus for keyboard users on every interactive element — ops staff
      drive this dashboard from the keyboard far more than from the mouse. */
   :focus-visible {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--accent-ink);
     outline-offset: 2px;
     border-radius: 4px;
   }

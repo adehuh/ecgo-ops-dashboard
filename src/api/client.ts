@@ -24,7 +24,7 @@ const NETWORK_MESSAGE =
   'Tidak bisa menghubungi server. Pastikan `npm run dev` dan `docker compose up -d` sedang berjalan, lalu coba lagi.'
 
 type RequestOptions = {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PATCH'
   body?: unknown
   signal?: AbortSignal
 }

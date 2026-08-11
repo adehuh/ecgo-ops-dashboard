@@ -98,7 +98,7 @@ const apply = (c: (typeof CASES)[number]) => {
               v-model.number="lat"
               type="number"
               step="0.0001"
-              class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 font-mono text-sm focus:border-accent focus:outline-none"
+              class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 font-mono text-sm focus:border-accent-ink focus:outline-none"
             >
           </label>
           <label class="space-y-1.5">
@@ -107,7 +107,7 @@ const apply = (c: (typeof CASES)[number]) => {
               v-model.number="lng"
               type="number"
               step="0.0001"
-              class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 font-mono text-sm focus:border-accent focus:outline-none"
+              class="w-full rounded-lg border border-border bg-surface-2 px-3 py-2.5 font-mono text-sm focus:border-accent-ink focus:outline-none"
             >
           </label>
         </div>
