@@ -53,6 +53,20 @@ const label = computed(() => {
   return `Segar ${age} dtk`
 })
 
+/**
+ * Versi ponsel: kata keadaannya saja, tanpa hitungan detik.
+ *
+ * Di header selebar 390px, "Terakhir 54 dtk lalu" mendorong nama pengguna keluar
+ * layar demi ketelitian yang tidak dipakai siapa pun sambil berjalan. Yang perlu
+ * terbaca sekilas adalah apakah datanya masih bisa dipercaya; angka pastinya ada
+ * di layar lebar.
+ */
+const shortLabel = computed(() => {
+  if (props.paused) return 'Dijeda'
+  if (ageSeconds.value === null) return 'Memuat…'
+  return { fresh: 'Segar', stale: 'Menua', failed: 'Gagal', paused: 'Dijeda' }[tone.value]
+})
+
 const DOT: Record<Tone, string> = {
   fresh: 'bg-ok shadow-[0_0_0_3px_color-mix(in_oklab,var(--ok)_18%,transparent)]',
   stale: 'bg-warn',
@@ -71,11 +85,19 @@ const wallClock = computed(() => formatTime(new Date(now.value).toISOString()))
       <!-- `role="status"` supaya perubahan ke keadaan gagal diumumkan pembaca
            layar; tanpa itu, kegagalan polling hanya terlihat oleh yang melihat. -->
       <span
-        class="size-[7px] shrink-0 rounded-full"
+        class="size-1.5 shrink-0 rounded-full sm:size-[7px]"
         :class="DOT[tone]"
         aria-hidden="true"
       />
-      <span class="text-xs text-soft tabular-nums" role="status">{{ label }}</span>
+      <!-- Label PENUH selalu ada di pohon aksesibilitas, hanya disembunyikan
+           secara visual di layar sempit — kalau ia di-`hidden`, pembaca layar
+           ikut kehilangan pengumuman saat polling gagal, dan kegagalan itu jadi
+           hanya terlihat oleh yang bisa melihat. Versi ringkas sebaliknya:
+           aria-hidden, supaya tidak diumumkan dua kali. -->
+      <span class="sr-only text-xs text-soft tabular-nums sm:not-sr-only" role="status">
+        {{ label }}
+      </span>
+      <span class="text-[11px] text-soft sm:hidden" aria-hidden="true">{{ shortLabel }}</span>
 
       <span class="h-3.5 w-px bg-border-raised" aria-hidden="true" />
 

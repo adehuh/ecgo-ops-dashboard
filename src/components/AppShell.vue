@@ -48,7 +48,10 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
     <header
       class="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70"
     >
-      <div class="mx-auto flex h-[60px] max-w-[88rem] items-center gap-4 px-4 sm:px-6">
+      <!-- Header menyusut di ponsel: 54px. Tiap piksel di bar yang menempel
+           adalah piksel yang tidak bisa dipakai daftar cabinet, dan di layar
+           390px itu berarti satu baris kartu lebih sedikit yang terlihat. -->
+      <div class="mx-auto flex h-[54px] max-w-[88rem] items-center gap-4 px-4 sm:h-[60px] sm:px-6">
         <RouterLink to="/cabinets" class="flex shrink-0 items-center gap-2.5" aria-label="ECGO Ops — beranda">
           <img
             src="/brand/ecgo-logo-white.png"

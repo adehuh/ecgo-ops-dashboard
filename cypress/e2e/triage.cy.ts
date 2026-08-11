@@ -19,11 +19,11 @@ describe('Pita kesehatan armada', () => {
     cy.visit('/cabinets')
     cy.get('table tbody tr').should('exist')
     // Chip menampilkan em-dash sampai /api/summary tiba; tunggu angkanya nyata.
-    cy.contains('button', 'Sehat').invoke('text').should('match', /\d/)
+    cy.contains('button', 'Online').invoke('text').should('match', /\d/)
   })
 
   it('menggantikan kartu KPI dengan lima chip yang semuanya bisa diklik', () => {
-    for (const label of ['Sehat', 'Offline', 'Heartbeat basi', 'Perawatan', '0 slot siap']) {
+    for (const label of ['Online', 'Offline', 'Heartbeat basi', 'Perawatan', '0 slot siap']) {
       cy.contains('button', label).should('be.visible')
     }
 
@@ -31,9 +31,34 @@ describe('Pita kesehatan armada', () => {
     cy.contains('Total cabinet').should('not.exist')
   })
 
+  it('segmen pita berjumlah tepat sebesar armadanya', () => {
+    // Segmen adalah partisi STATUS (Online + Perawatan + Offline), yang saling
+    // lepas dan menghabiskan semua kemungkinan. Kondisi turunan seperti
+    // "heartbeat basi" beririsan dengan Online, jadi memasukkannya akan
+    // menggambar pita yang menjumlah lebih dari ukuran armadanya sendiri.
+    const angka = (label: string) =>
+      cy.contains('button', label).find('[data-cy=chip-count]').invoke('text')
+
+    angka('Online').then((online) =>
+      angka('Perawatan').then((perawatan) =>
+        angka('Offline').then((offline) => {
+          const jumlah = [online, perawatan, offline].reduce((a, t) => a + Number(t.replace(/\D/g, '')), 0)
+          cy.get('header').contains(/\d+ cabinet/).invoke('text').then((teks) => {
+            expect(jumlah, 'segmen pita = ukuran armada').to.eq(Number(teks.replace(/\D/g, '')))
+          })
+        }),
+      ),
+    )
+  })
+
   it('tiap chip menghasilkan jumlah baris yang sama dengan angkanya sendiri', () => {
     // Inti §12.1 nomor 1. Angka 17 yang dulu tidak bisa diklik.
+    // KELIMA chip diuji, tanpa kecuali. Versi sebelumnya melewatkan chip
+    // pertama, dan justru chip itulah yang rusak: ia berlabel "Sehat" dengan
+    // jumlah berbasis kesehatan tapi memfilter `status=ONLINE`, sehingga
+    // menuliskan satu angka lalu menghasilkan jumlah baris yang lain.
     const cases = [
+      ['Online', 'status=ONLINE'],
       ['Offline', 'status=OFFLINE'],
       ['Perawatan', 'status=MAINTENANCE'],
       ['Heartbeat basi', 'status=STALE_HEARTBEAT'],

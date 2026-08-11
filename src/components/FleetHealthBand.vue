@@ -27,7 +27,11 @@ const props = defineProps<{
   active: readonly ConditionFilter[]
 }>()
 
-const emit = defineEmits<{ toggle: [filter: ConditionFilter] }>()
+const emit = defineEmits<{
+  toggle: [filter: ConditionFilter]
+  /** Kartu ponsel: pasang SELURUH himpunan "perlu perhatian" sekaligus. */
+  attention: []
+}>()
 
 type Chip = {
   key: string
@@ -62,20 +66,25 @@ type Chip = {
  */
 const chips = computed<Chip[]>(() => {
   const s = props.summary
-  const sehat = s ? Math.max(0, s.total - s.needsAttention) : undefined
 
   return [
     {
-      key: 'sehat',
-      label: 'Sehat',
-      count: sehat,
+      key: 'online',
+      // Dulu berlabel "Sehat" dengan jumlah `total - needsAttention`, tapi
+      // filternya `status=ONLINE`. Itu DUA definisi berbeda di satu tombol:
+      // ONLINE mencakup yang heartbeat-nya basi, sehingga chip bisa menuliskan
+      // 33 lalu menghasilkan 38 baris — persis tebak-tebakan yang redesign ini
+      // ada untuk menghapus, dan satu-satunya chip yang luput dari test.
+      //
+      // Sekarang label, jumlah, dan filternya menyebut hal yang SAMA: status.
+      // "Seberapa sehat" tetap terjawab oleh angka besar di atas dan oleh dua
+      // chip kondisi di bawah.
+      label: 'Online',
+      count: s?.online,
       marker: 'circle',
       bar: 'bg-ok',
       idle: 'border-border-raised text-label',
       activeClass: 'border-ok bg-ok/22 text-ok',
-      // "Sehat" bukan sinonim ONLINE — ONLINE mencakup yang basi juga. Tapi
-      // ONLINE adalah satu-satunya nilai yang ada, dan chip ini memang berperan
-      // sebagai "tampilkan yang tidak bermasalah".
       filter: 'ONLINE',
       inBar: true,
     },
@@ -99,7 +108,9 @@ const chips = computed<Chip[]>(() => {
       idle: 'border-warn/45 bg-warn/14 text-warn-tint',
       activeClass: 'border-warn bg-warn/22 text-warn-tint',
       filter: 'STALE_HEARTBEAT',
-      inBar: true,
+      // Bagian dari Online, bukan kategori sejajar dengannya: memasukkannya ke
+      // pita membuat total segmen melebihi ukuran armada. Ia tetap chip filter.
+      inBar: false,
     },
     {
       key: 'perawatan',
@@ -177,8 +188,47 @@ const show = (v: number | undefined) => (v === undefined ? '—' : formatNumber(
 </script>
 
 <template>
+  <!--
+    PONSEL: satu kartu peringatan yang bisa diketuk, bukan pita penuh.
+
+    Di layar 390px, lima chip dan sebuah bar tersegmen menghabiskan setengah
+    layar untuk sesuatu yang hanya bisa disentuh dengan tepat oleh jempol yang
+    beruntung. Yang benar-benar ditindaklanjuti di lapangan cuma satu:
+    "berapa yang perlu perhatian, tunjukkan". "Total cabinet: 50" tidak bisa
+    ditindaklanjuti dari motor dan tidak layak mendapat ruang itu.
+  -->
+  <div v-if="!summary" class="h-[76px] rounded-xl shimmer lg:hidden" aria-hidden="true" />
+
+  <button
+    v-else
+    type="button"
+    class="flex w-full items-center gap-3 rounded-xl border border-l-[3px] border-warn/40 border-l-warn bg-surface p-3.5 text-left lg:hidden"
+    @click="emit('attention')"
+  >
+    <span class="text-[32px] leading-none font-extrabold text-warn tabular-nums">
+      {{ formatNumber(summary.needsAttention) }}
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block text-[13px] font-semibold">perlu perhatian</span>
+      <span class="block truncate text-xs text-label">
+        {{ summary.offline }} offline · {{ summary.stale }} basi ·
+        {{ summary.maintenance }} perawatan
+      </span>
+    </span>
+    <svg
+      class="size-4 shrink-0 text-faint"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      aria-hidden="true"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7" />
+    </svg>
+  </button>
+
   <section
-    class="grid gap-4 rounded-[14px] border border-border bg-surface px-5 py-[18px] lg:grid-cols-[1fr_340px]"
+    class="hidden gap-4 rounded-[14px] border border-border bg-surface px-5 py-[18px] lg:grid lg:grid-cols-[1fr_340px]"
     aria-label="Kesehatan armada"
   >
     <!-- Kiri: judul, pita tersegmen, chip -->
@@ -194,8 +244,15 @@ const show = (v: number | undefined) => (v === undefined ? '—' : formatNumber(
         <span class="ml-auto text-xs text-faint">Klik segmen untuk memfilter tabel</span>
       </div>
 
-      <!-- Lebar tiap segmen PROPORSIONAL terhadap jumlah sungguhan, jadi
-           bentuknya sudah menceritakan distribusinya sebelum satu angka dibaca. -->
+      <!-- Segmen pita adalah PARTISI STATUS: Online + Perawatan + Offline
+           selalu tepat sama dengan ukuran armada, karena ketiga status itu
+           saling lepas dan menghabiskan semua kemungkinan. Kondisi turunan
+           (basi, 0 slot siap) sengaja tidak ikut — keduanya beririsan dengan
+           status, dan pita yang menjumlah lebih dari 50 dari 50 cabinet adalah
+           gambar yang berbohong.
+
+           Lebar tiap segmen proporsional terhadap jumlah sungguhan, jadi
+           bentuknya menceritakan distribusinya sebelum satu angka dibaca. -->
       <div class="flex h-3 gap-[3px] overflow-hidden rounded-full">
         <button
           v-for="c in barChips"
@@ -222,7 +279,7 @@ const show = (v: number | undefined) => (v === undefined ? '—' : formatNumber(
           :data-shortcut="i + 1"
           @click="emit('toggle', c.filter)"
         >
-          <ConditionMarker :shape="c.marker" :class="c.key === 'sehat' ? 'text-ok' : ''" />
+          <ConditionMarker :shape="c.marker" :class="c.key === 'online' ? 'text-ok' : ''" />
           {{ c.label }}
           <!-- Jumlahnya ditandai tersendiri: label "0 slot siap" sudah memuat
                angka, jadi membaca teks chip utuh tidak bisa membedakan angka

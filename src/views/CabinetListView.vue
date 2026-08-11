@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { toQueryString } from '@/api/client'
 // Tiap komponen di-import eksplisit: lebih berisik satu kali, tapi "komponen ini
 // datang dari mana?" bisa dijawab tanpa menebak.
@@ -26,6 +26,7 @@ import {
   type FleetSummaryResponse,
 } from '@shared/contracts/cabinets'
 
+const route = useRoute()
 const router = useRouter()
 const { state, apiQuery, hasInvalidParams, isFiltered, patch, toggleStatus, toggleSort, reset } =
   useCabinetQuery()
@@ -199,7 +200,7 @@ const HEARTBEAT_PILL: Record<ConditionTone, string> = {
 // --- Keadaan kosong --------------------------------------------------------
 
 const FILTER_LABELS: Record<ConditionFilter, string> = {
-  ONLINE: 'Sehat',
+  ONLINE: 'Online',
   OFFLINE: 'Offline',
   MAINTENANCE: 'Perawatan',
   STALE_HEARTBEAT: 'Heartbeat basi',
@@ -209,6 +210,71 @@ const FILTER_LABELS: Record<ConditionFilter, string> = {
 const activeFilterLabels = computed(() =>
   (state.value.status ?? []).map((s) => FILTER_LABELS[s]).join(', '),
 )
+
+/**
+ * Kartu peringatan ponsel: pasang SELURUH himpunan "perlu perhatian".
+ *
+ * Ketiganya di-OR di server dan gabungannya sama persis dengan definisi
+ * `needsAttention` di /api/summary — bukan ONLINE (yaitu offline atau
+ * perawatan), ATAU heartbeat basi, ATAU belum pernah melapor. Memasang satu
+ * saja akan menampilkan 14 baris di bawah angka 17, dan angka yang tidak cocok
+ * dengan isinya persis keluhan yang membuat redesign ini ada.
+ */
+const ATTENTION_FILTERS: ConditionFilter[] = ['OFFLINE', 'MAINTENANCE', 'STALE_HEARTBEAT']
+
+const showAttention = () => patch({ status: ATTENTION_FILTERS })
+
+/**
+ * Tautan baris membawa parameter daftar yang sedang aktif.
+ *
+ * Itulah yang membuat tombol prev/next di halaman detail bisa menyusuri urutan
+ * yang BARU SAJA dilihat ops, bukan urutan bawaan. Tanpa ini, "periksa enam
+ * cabinet" berarti dua belas navigasi bolak-balik.
+ */
+const detailLink = (code: string) => ({
+  path: `/cabinets/${code}`,
+  query: route.query,
+})
+
+/**
+ * Seluruh baris menjadi target klik, bukan hanya sel kodenya.
+ *
+ * Barisnya sudah menyala saat di-hover, dan sorotan itu menjanjikan sesuatu yang
+ * tidak ditepati: mengeklik segmen slot atau pil heartbeat tidak melakukan
+ * apa-apa. Menjanjikan interaksi lalu tidak menyediakannya lebih buruk daripada
+ * tidak menjanjikannya sama sekali.
+ *
+ * Tautan sungguhan di sel kode tetap ada dan tetap menjadi satu-satunya yang
+ * dilihat pembaca layar — handler ini hanya memperluas area kliknya. Karena itu
+ * ia sengaja MELEWATI beberapa kasus:
+ *
+ *   - klik yang berasal dari <a>/<button>: biarkan elemennya sendiri yang
+ *     menangani, kalau tidak navigasinya terjadi dua kali;
+ *   - klik dengan modifier atau tombol tengah: itu "buka di tab baru", dan hanya
+ *     anchor yang bisa melakukannya — membajaknya justru menghilangkan fitur;
+ *   - saat ada teks yang sedang diseleksi: menyeret untuk menyalin kode cabinet
+ *     tidak boleh berubah jadi navigasi.
+ */
+function openRow(event: MouseEvent, code: string) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+
+  const el = event.target as HTMLElement | null
+  if (el?.closest('a, button')) return
+
+  if ((window.getSelection()?.toString().length ?? 0) > 0) return
+
+  void router.push(detailLink(code))
+}
+
+/**
+ * Jalan keluar kedua dari banner error: buka health check-nya sendiri.
+ *
+ * "Coba lagi" hanya berguna kalau kegagalannya sesaat. Kalau tidak, pertanyaan
+ * berikutnya selalu "servernya yang mati atau jaringan saya?" — dan `/api/health`
+ * menjawabnya dalam satu klik karena ia benar-benar menyentuh database, bukan
+ * sekadar membalas 200.
+ */
+const openHealth = () => window.open('/api/health', '_blank', 'noopener,noreferrer')
 
 /** Umur data yang MASIH TERLIHAT di layar saat polling gagal. */
 const staleAge = computed(() =>
@@ -309,6 +375,7 @@ watch(decorated, () => {
       :pending="summaryLoading"
       :active="state.status ?? []"
       @toggle="toggleStatus"
+      @attention="showAttention"
     />
 
     <TriageQueue :items="decorated" />
@@ -346,12 +413,14 @@ watch(decorated, () => {
             :maxlength="100"
             placeholder="Cari kode atau cabang…"
             aria-label="Cari kode cabinet atau cabang"
-            class="w-full rounded-lg border border-border-raised bg-surface-2 py-[9px] pr-11 pl-[34px] text-sm placeholder:text-faint focus:border-accent-ink focus:outline-none"
+            class="w-full rounded-[10px] border border-border-raised bg-surface-2 py-3 pr-4 pl-[34px] text-[15px] placeholder:text-faint focus:border-accent-ink focus:outline-none sm:rounded-lg sm:py-[9px] sm:pr-11 sm:text-sm"
           >
           <!-- Petunjuk pintasan ditempel di kotaknya sendiri: tempat pengguna
-               sudah melihat ketika ia bertanya "bagaimana cara cepat ke sini". -->
+               sudah melihat ketika ia bertanya "bagaimana cara cepat ke sini".
+               Disembunyikan di ponsel — tidak ada papan ketik untuk menekan `/`,
+               jadi di sana ia hanya memakan ruang sentuh. -->
           <span
-            class="pointer-events-none absolute top-1/2 right-[9px] -translate-y-1/2 rounded-[5px] border border-border-strong px-1.5 py-px font-mono text-[11px] text-faint"
+            class="pointer-events-none absolute top-1/2 right-[9px] hidden -translate-y-1/2 rounded-[5px] border border-border-strong px-1.5 py-px font-mono text-[11px] text-faint sm:block"
             aria-hidden="true"
           >
             /
@@ -407,7 +476,9 @@ watch(decorated, () => {
         variant="banner"
         title="Server tidak menjawab"
         action-label="Coba lagi"
+        secondary-label="Lihat status API"
         @action="refresh()"
+        @secondary="openHealth"
       >
         <template #description>
           <template v-if="staleAge && rows.length">
@@ -494,11 +565,12 @@ watch(decorated, () => {
               <tr
                 v-for="({ cabinet, condition }, i) in decorated"
                 :key="cabinet.code"
-                class="border-b border-border-soft transition-colors hover:bg-surface-2"
+                class="cursor-pointer border-b border-border-soft transition-colors hover:bg-surface-2"
                 :class="[
                   ROW_TINT[condition.tone],
                   i === focusedRow ? 'outline-2 -outline-offset-2 outline-accent-ink' : '',
                 ]"
+                @click="openRow($event, cabinet.code)"
               >
                 <!-- Rail keparahan sebagai KOLOM setinggi baris penuh, bukan
                      border-left: border akan tertimpa saat baris di-hover. -->
@@ -508,7 +580,7 @@ watch(decorated, () => {
 
                 <td class="p-[8px_14px]">
                   <RouterLink
-                    :to="`/cabinets/${cabinet.code}`"
+                    :to="detailLink(cabinet.code)"
                     class="font-mono text-[13px] font-semibold tracking-[-.01em] text-text hover:text-accent-ink hover:underline"
                   >
                     {{ cabinet.code }}
@@ -571,7 +643,7 @@ watch(decorated, () => {
           <ul class="divide-y divide-border-soft md:hidden">
             <li v-for="{ cabinet, condition } in decorated" :key="cabinet.code">
               <RouterLink
-                :to="`/cabinets/${cabinet.code}`"
+                :to="detailLink(cabinet.code)"
                 class="block border-l-[3px] p-[12px_13px] hover:bg-surface-2"
                 :class="[RAIL_BORDER[condition.tone], ROW_TINT[condition.tone]]"
               >
