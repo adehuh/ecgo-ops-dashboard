@@ -29,6 +29,17 @@
   font-style: normal;
   font-display: swap;
 }
+/* SemiBold ditambahkan untuk redesign §12: `font-synthesis-weight: none` di bawah
+   berarti weight 600 TIDAK disintesis dari 500 — tanpa berkas ini setiap
+   `font-semibold` diam-diam dirender sebagai 500 dan hierarki tipografinya rata.
+   Sama seperti tiga weight lain: Poppins SIL OFL, subset latin. */
+@font-face {
+  font-family: 'Poppins';
+  src: url('/brand/fonts/Poppins-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
 @font-face {
   font-family: 'Poppins';
   src: url('/brand/fonts/Poppins-ExtraBold.woff2') format('woff2');
@@ -76,6 +87,28 @@
 
   --ring: color-mix(in oklab, var(--accent-ink) 55%, transparent);
   --shadow-card: 0 1px 2px rgb(11 21 18 / 5%), 0 8px 24px -14px rgb(11 21 18 / 10%);
+
+  /* --- Nilai baru dari redesign §12 -------------------------------------- *
+   * Handoff-nya ditulis seluruhnya dalam heks tema GELAP, sementara tema
+   * default aplikasi ini TERANG. Menempelkan heks itu apa adanya akan
+   * mematikan tema terang, dan §12.4 menyatakan tema terang tetap ada. Jadi
+   * tiap nilai baru menjadi token dengan padanan di kedua tema.               */
+  --panel-deep: #eef2f0; /* interior badan cabinet, bar header */
+  --table-head: #f4f7f5; /* baris header tabel */
+  --border-soft: #edf1ef; /* pemisah antar baris, lebih tipis dari --border */
+  --border-raised: #c9d4cf; /* border elemen interaktif */
+  --segment-active: #e2eae6; /* segmen aktif pada segmented control */
+  --track: #e8eeeb; /* gridline grafik, track bar SOC */
+  --slot-empty: #dde5e1; /* segmen slot kosong */
+  --text-label: #55665f; /* label kolom tabel */
+  --text-dim: #84968e; /* label sumbu, angka nol */
+  --text-soft: #2b3a34; /* label formulir */
+
+  /* Teks di atas isian bertint. Di tema terang warna dasarnya sudah gelap dan
+     sudah lolos 4,5:1 di atas tint terang, jadi ketiganya sama dengan dasarnya. */
+  --danger-on-tint: #c2352b;
+  --warn-on-tint: #9a6700;
+  --info-on-tint: #1f5fa8;
 }
 
 .dark {
@@ -102,6 +135,24 @@
   --neutral: #7d8f88;
 
   --shadow-card: 0 1px 0 rgb(255 255 255 / 3%) inset, 0 12px 32px -20px rgb(0 0 0 / 80%);
+
+  /* Nilai gelap diambil apa adanya dari tabel "New values" di handoff. */
+  --panel-deep: #0d1614;
+  --table-head: #0f1815;
+  --border-soft: #1b2622;
+  --border-raised: #2c3a34;
+  --segment-active: #243330;
+  --track: #1e2a25;
+  --slot-empty: #2a3832;
+  --text-label: #8fa39b;
+  --text-dim: #5c6f68;
+  --text-soft: #c8d6d0;
+
+  /* #f2635c murni di atas isian rgb(242 99 92 / 16%) hanya ~4,1:1. Trio ini ada
+     khusus untuk TEKS di atas tint; rail, titik, dan stroke tetap warna dasar. */
+  --danger-on-tint: #ff8f89;
+  --warn-on-tint: #f5c85a;
+  --info-on-tint: #84c0f5;
 }
 
 /* `@theme inline` emits utilities that reference the custom property rather than
@@ -126,6 +177,21 @@
   --color-danger: var(--danger);
   --color-info: var(--info);
   --color-neutral: var(--neutral);
+
+  --color-panel-deep: var(--panel-deep);
+  --color-table-head: var(--table-head);
+  --color-border-soft: var(--border-soft);
+  --color-border-raised: var(--border-raised);
+  --color-segment-active: var(--segment-active);
+  --color-track: var(--track);
+  --color-slot-empty: var(--slot-empty);
+  --color-label: var(--text-label);
+  --color-dim: var(--text-dim);
+  --color-soft: var(--text-soft);
+
+  --color-danger-tint: var(--danger-on-tint);
+  --color-warn-tint: var(--warn-on-tint);
+  --color-info-tint: var(--info-on-tint);
 
   --font-sans: 'Poppins', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, monospace;

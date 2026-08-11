@@ -1,6 +1,16 @@
+import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
+  // Alias yang sama dengan vite.config.ts, supaya berkas di `src/` yang diuji
+  // memakai jalur import yang persis sama dengan saat dibundel.
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@shared': fileURLToPath(new URL('./shared', import.meta.url)),
+    },
+  },
+
   test: {
     include: ['tests/**/*.spec.ts'],
     environment: 'node',
