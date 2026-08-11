@@ -51,7 +51,7 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
       <!-- Header menyusut di ponsel: 54px. Tiap piksel di bar yang menempel
            adalah piksel yang tidak bisa dipakai daftar cabinet, dan di layar
            390px itu berarti satu baris kartu lebih sedikit yang terlihat. -->
-      <div class="mx-auto flex h-[54px] max-w-[88rem] items-center gap-4 px-4 sm:h-[60px] sm:px-6">
+      <div class="mx-auto flex h-[54px] max-w-[88rem] items-center gap-2 px-3 sm:h-[60px] sm:gap-4 sm:px-6">
         <RouterLink to="/cabinets" class="flex shrink-0 items-center gap-2.5" aria-label="ECGO Ops — beranda">
           <img
             src="/brand/ecgo-logo-white.png"
@@ -69,12 +69,12 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
           </span>
         </RouterLink>
 
-        <nav aria-label="Navigasi utama" class="ml-2 flex items-center gap-1">
+        <nav aria-label="Navigasi utama" class="flex min-w-0 items-center gap-0.5 sm:ml-2 sm:gap-1">
           <RouterLink
             v-for="item in nav"
             :key="item.to"
             :to="item.to"
-            class="rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-surface-2"
+            class="rounded-lg px-2 py-2 text-[13px] font-medium whitespace-nowrap transition-colors hover:bg-surface-2 sm:px-3 sm:text-sm"
             :class="isActive(item.to) ? 'bg-surface-2 text-text' : 'text-muted'"
             :aria-current="isActive(item.to) ? 'page' : undefined"
           >
@@ -82,7 +82,7 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
           </RouterLink>
         </nav>
 
-        <div class="ml-auto flex items-center gap-2">
+        <div class="ml-auto flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
           <!-- Sasaran teleport, bukan komponen yang dipasang mati di sini.
                Kesegaran data adalah milik halaman yang melakukan polling, dan
                AppShell juga dipakai halaman yang tidak polling sama sekali
@@ -109,7 +109,7 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
           <button
             v-if="auth.user"
             type="button"
-            class="grid size-11 place-items-center rounded-lg border border-border text-muted transition-colors hover:bg-surface-2 hover:text-text disabled:opacity-50"
+            class="grid size-9 place-items-center rounded-lg border border-border text-muted sm:size-11 transition-colors hover:bg-surface-2 hover:text-text disabled:opacity-50"
             :disabled="loggingOut"
             aria-label="Keluar"
             title="Keluar"
@@ -132,7 +132,7 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
 
           <button
             type="button"
-            class="grid size-11 place-items-center rounded-lg border border-border text-muted transition-colors hover:bg-surface-2 hover:text-text"
+            class="grid size-9 place-items-center rounded-lg border border-border text-muted sm:size-11 transition-colors hover:bg-surface-2 hover:text-text"
             :aria-label="theme === 'dark' ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'"
             @click="toggle"
           >

@@ -427,11 +427,17 @@ watch(decorated, () => {
           </span>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2 lg:ml-auto">
-          <span class="text-xs text-faint">Urut</span>
+        <div class="flex min-w-0 items-center gap-2 lg:ml-auto">
+          <span class="shrink-0 text-xs text-faint">Urut</span>
 
+          <!-- Menggulir mendatar di layar sempit, bukan membungkus.
+               Empat pilihan sortir tidak muat di 390px, dan versi sebelumnya
+               melimpah keluar kartu sampai menimpa tabel di bawahnya. Membungkus
+               akan memecah satu kontrol menjadi dua baris yang tidak lagi
+               terbaca sebagai satu kelompok, jadi ia digulir — pola yang sama
+               dipakai bar tab di aplikasi ponsel mana pun. -->
           <div
-            class="flex gap-0.5 rounded-lg border border-border-raised bg-surface-2 p-0.5"
+            class="flex min-w-0 gap-0.5 overflow-x-auto rounded-lg border border-border-raised bg-surface-2 p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             role="group"
             aria-label="Urutkan daftar"
           >
@@ -439,7 +445,7 @@ watch(decorated, () => {
               v-for="s in SORTS"
               :key="s.key"
               type="button"
-              class="cursor-pointer rounded-md px-[11px] py-1.5 text-[13px] font-medium transition-colors"
+              class="shrink-0 cursor-pointer rounded-md px-[11px] py-1.5 text-[13px] font-medium whitespace-nowrap transition-colors"
               :class="
                 state.sort === s.key
                   ? 'bg-segment-active text-text'
@@ -455,7 +461,7 @@ watch(decorated, () => {
           <select
             :value="state.pageSize"
             aria-label="Jumlah baris per halaman"
-            class="rounded-lg border border-border-raised bg-surface-2 px-2.5 py-[7px] text-[13px] text-muted focus:border-accent-ink focus:outline-none"
+            class="shrink-0 rounded-lg border border-border-raised bg-surface-2 px-2.5 py-[7px] text-[13px] text-muted focus:border-accent-ink focus:outline-none"
             @change="patch({ pageSize: Number(($event.target as HTMLSelectElement).value) })"
           >
             <option v-for="size in PAGE_SIZES" :key="size" :value="size">{{ size }} / hal</option>

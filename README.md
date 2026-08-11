@@ -40,7 +40,7 @@ Diperiksa terhadap aplikasi yang berjalan, bukan dari ingatan.
 | **Seed data** — min 50 cabinet / 600 slot / 20.000 swap / 30 hari / satu perintah | ✅ | 50 · 600 · **22.000** · 30 hari · `npm run seed` |
 | **API** — min 2 route handler, Zod, error konsisten | ✅ | 8 handler · 15 skema Zod · `VALIDATION_ERROR` 400 · `UNAUTHORIZED` 401 · `NOT_FOUND` 404 · `CONFLICT` 409 · `TOO_MANY_REQUESTS` 429 · `INTERNAL` 500 |
 | **UI state** — loading, empty, error | ✅ | ketiganya di kedua halaman; empty dibedakan "tidak cocok filter" vs "belum ada data" |
-| **Query** — nol N+1, agregasi di database | ✅ | daftar = **1 query** (2 CTE + join, `count(*) OVER ()`); detail = 4 query paralel; nol `.reduce()` atas baris swap di server; `EXPLAIN ANALYZE` di §6 |
+| **Query** — nol N+1, agregasi di database | ✅ | daftar = **1 query** (6 CTE + join, `count(*) OVER ()`); detail = 4 query paralel; nol `.reduce()` atas baris swap di server; `EXPLAIN ANALYZE` di §6 |
 | **README** — setup, asumsi, trade-off, belum selesai, AI tool | ✅ | §2 · §7 · §8 · §9 · §10 |
 | **Git** — commit bertahap, pesan bermakna | ✅ | 13 commit berlapis, tidak ada "initial commit" tunggal |
 
@@ -55,7 +55,7 @@ Soal menandai ini opsional dan hanya dinilai kalau yang wajib sudah lengkap.
 
 | Bonus | Status | Di mana |
 | --- | --- | --- |
-| **Unit / E2E test** | ✅ keduanya | 86 test Vitest (36 geofence · 24 kontrak API · 26 auth) + **23 test Cypress** end-to-end |
+| **Unit / E2E test** | ✅ keduanya | 121 test Vitest (36 geofence · 26 auth · 24 kontrak API · 21 kondisi · 14 triage API) + **50 test Cypress** end-to-end |
 | **Optimistic UI** | ✅ | tombol "Tandai perawatan" di halaman detail — lihat §7.13 |
 | **Skeleton loading** | ✅ | skeleton berbentuk sama dengan tabel yang menggantikannya, jumlah barisnya mengikuti `pageSize` |
 | **Dark mode** | ✅ | default gelap, tombol di header, dipasang dari cookie sebelum paint pertama |
@@ -69,11 +69,11 @@ yang saya tulis di §7. Semuanya diambil dari aplikasi yang berjalan, bukan mock
 
 | | |
 | --- | --- |
-| <img src="docs/screenshots/02-list-dark.png" alt="Daftar cabinet, tema gelap" width="100%"> **Daftar cabinet.** Badge "Online · basi" dan "Online · belum lapor" adalah §7.4 dan §7.5: cabinet yang mengaku sehat tapi diam terlalu lama tidak boleh terlihat sama dengan yang benar-benar sehat. | <img src="docs/screenshots/04-detail.png" alt="Detail cabinet" width="100%"> **Detail.** Banner basi (§7.3) — data terakhir tetap ditampilkan, tapi ditandai. Slot kosong tertulis "Tidak ada baterai", bukan 0% (§7.6). |
-| <img src="docs/screenshots/06-scoped-supervisor.png" alt="Tampilan supervisor" width="100%"> **Ruang lingkup cabang.** Supervisor Kemayoran melihat **10** cabinet, bukan 50 — termasuk KPI di atasnya. Ruang lingkupnya ditulis permanen di header supaya tidak ada yang salah membaca angka ini sebagai angka armada. | <img src="docs/screenshots/07-cross-branch-404.png" alt="404 lintas cabang" width="100%"> **404, bukan 403** (§7.12). Membuka cabinet milik cabang lain secara langsung menghasilkan jawaban yang tidak bisa dibedakan dari "cabinet tidak ada". |
-| <img src="docs/screenshots/05-empty.png" alt="Empty state" width="100%"> **Empty state.** Dibedakan dari error dan dari "belum ada data", dan menawarkan jalan keluar alih-alih jalan buntu. | <img src="docs/screenshots/03-list-light.png" alt="Tema terang" width="100%"> **Tema terang.** Dipasang dari cookie oleh skrip di `<head>`, jadi tidak ada kilatan putih saat memuat. |
-| <img src="docs/screenshots/08-mobile.png" alt="Tampilan ponsel" width="100%"> **Ponsel.** Tabel enam kolom tidak bisa dipakai di lapangan, jadi di bawah breakpoint `md` ia berganti menjadi kartu. | <img src="docs/screenshots/09-geofence.png" alt="Halaman geofence" width="100%"> **Bagian B, hidup.** Halaman `/geofence` menjalankan `evaluateCheckIn()` yang sama persis dengan yang diuji 36 unit test. |
-| <img src="docs/screenshots/10-optimistic-maintenance.png" alt="Cabinet ditandai perawatan" width="100%"> **Optimistic UI** (§7.13). Badge dan tombol berbalik seketika saat diklik, sebelum server menjawab; kalau server menolak, keadaannya dikembalikan beserta alasannya. Ada test Cypress khusus untuk rollback-nya. | |
+| <img src="docs/screenshots/02-list-dark.png" alt="Daftar cabinet, tema gelap" width="100%"> **Papan triage.** Kolom "Kondisi" menuliskan masalahnya dengan kata-kata — "Offline 5 jam", "0 slot siap ditukar" — alih-alih menyuruh mata menyimpulkannya dari status + heartbeat + jumlah slot di tiga kolom terpisah (§12.1). Tiap chip di pita atas ADALAH filternya, dan jumlah di chip selalu sama dengan jumlah baris yang dihasilkannya. | <img src="docs/screenshots/04-detail.png" alt="Detail cabinet" width="100%"> **Detail.** Banner basi (§7.3) — data terakhir tetap ditampilkan, tapi ditandai. Grid slot mengikuti susunan fisik cabinet (2 kolom × 6 baris), jadi nomor di layar = nomor di pintu. Slot kosong tertulis "Kosong · tidak ada baterai", bukan 0% (§7.6). |
+| <img src="docs/screenshots/06-scoped-supervisor.png" alt="Tampilan supervisor" width="100%"> **Ruang lingkup cabang.** Supervisor Kemayoran melihat **10** cabinet, bukan 50 — termasuk seluruh angka di pita kesehatan. Ruang lingkupnya ditulis permanen di header supaya tidak ada yang salah membaca angka ini sebagai angka armada. | <img src="docs/screenshots/07-cross-branch-404.png" alt="404 lintas cabang" width="100%"> **404, bukan 403** (§7.12). Membuka cabinet milik cabang lain secara langsung menghasilkan jawaban yang tidak bisa dibedakan dari "cabinet tidak ada". |
+| <img src="docs/screenshots/05-empty.png" alt="Empty state" width="100%"> **Empty state.** Menyebut kata kunci dan filter yang sedang aktif, lalu menawarkan melonggarkannya satu per satu — bukan hanya "bersihkan semua". Dibedakan dari error dan dari "belum ada data". | <img src="docs/screenshots/03-list-light.png" alt="Tema terang" width="100%"> **Tema terang.** Dipasang dari cookie oleh skrip di `<head>`, jadi tidak ada kilatan putih saat memuat. Seluruh nilai warna redesign punya padanan terang; tidak ada heks gelap yang ditempel mati. |
+| <img src="docs/screenshots/08-mobile.png" alt="Tampilan ponsel" width="100%"> **Ponsel.** Tabel tujuh kolom tidak bisa dipakai di lapangan, jadi di bawah breakpoint `md` ia berganti menjadi kartu — lengkap dengan 12 segmen slot dan pil kondisi. Pita kesehatan menyusut jadi satu kartu peringatan yang bisa diketuk. | <img src="docs/screenshots/09-geofence.png" alt="Halaman geofence" width="100%"> **Bagian B, hidup.** Halaman `/geofence` menjalankan `evaluateCheckIn()` yang sama persis dengan yang diuji 36 unit test. Kelima kasus dari soal dibandingkan field demi field, jadi "5 dari 5 lulus" di judulnya dihitung, bukan diketik. |
+| <img src="docs/screenshots/10-optimistic-maintenance.png" alt="Cabinet ditandai perawatan" width="100%"> **Optimistic UI** (§7.13). Pil kondisi dan tombolnya berbalik seketika saat diklik, sebelum server menjawab; kalau server menolak, keadaannya dikembalikan beserta alasannya. Ada test Cypress khusus untuk rollback-nya. | |
 
 <img src="docs/screenshots/01-login.png" alt="Halaman masuk" width="420"> **Masuk.** Daftar akun demo hanya dirender saat `import.meta.env.DEV` — Vite membuangnya dari bundel produksi, bukan sekadar menyembunyikannya.
 
@@ -114,8 +114,8 @@ hasilnya **404**, bukan 403. Alasannya di §7.
 ### Perintah lain
 
 ```bash
-npm test            # 86 test Vitest (36 geofence + 24 kontrak API + 26 auth)
-npm run test:e2e    # 23 test Cypress end-to-end (aplikasi harus sedang berjalan)
+npm test            # 121 test Vitest (36 geofence + 26 auth + 24 kontrak API + 21 kondisi + 14 triage API)
+npm run test:e2e    # 50 test Cypress end-to-end (aplikasi harus sedang berjalan)
 npm run typecheck   # vue-tsc untuk client, tsc untuk server
 npm run build       # dist/client (SPA) + dist/server (API)
 npm start           # produksi: satu proses, satu port, API + SPA
