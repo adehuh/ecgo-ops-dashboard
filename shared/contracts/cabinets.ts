@@ -11,7 +11,30 @@ import { z } from 'zod'
 
 export const CABINET_STATUSES = ['ONLINE', 'OFFLINE', 'MAINTENANCE'] as const
 export const SLOT_STATES = ['EMPTY', 'CHARGING', 'FULL', 'LOCKED', 'FAULT'] as const
-export const SORT_KEYS = ['swaps24h', 'code', 'lastHeartbeat'] as const
+
+/**
+ * Nilai `status` yang diterima filter daftar.
+ *
+ * Tiga yang pertama adalah status yang DILAPORKAN perangkat dan tersimpan di
+ * kolom `cabinets.status`. Dua terakhir bukan status — keduanya KONDISI yang
+ * diturunkan, dan sengaja ikut di parameter yang sama supaya URL lama tetap
+ * sah: `?status=ONLINE` yang sudah di-bookmark orang tidak boleh berubah arti
+ * hanya karena filternya bertambah.
+ *
+ * Keduanya diselesaikan di server memakai predikat yang PERSIS sama dengan
+ * ekspresi `CASE` pada sortir keparahan. Kalau keduanya menyimpang, memfilter
+ * "heartbeat basi" akan mengembalikan baris yang kolom Kondisi-nya menuliskan
+ * hal lain.
+ */
+export const CONDITION_FILTERS = [
+  'ONLINE',
+  'OFFLINE',
+  'MAINTENANCE',
+  'STALE_HEARTBEAT',
+  'NO_READY_SLOTS',
+] as const
+
+export const SORT_KEYS = ['severity', 'swaps24h', 'code', 'lastHeartbeat'] as const
 export const SORT_DIRECTIONS = ['asc', 'desc'] as const
 
 /** Enum, bukan integer bebas — supaya tidak ada yang bisa meminta pageSize=1000000. */
@@ -19,9 +42,14 @@ export const PAGE_SIZES = [10, 25, 50] as const
 
 export const cabinetStatusSchema = z.enum(CABINET_STATUSES)
 export const slotStateSchema = z.enum(SLOT_STATES)
+export const conditionFilterSchema = z.enum(CONDITION_FILTERS)
 
 export type CabinetStatus = z.infer<typeof cabinetStatusSchema>
 export type SlotState = z.infer<typeof slotStateSchema>
+export type ConditionFilter = z.infer<typeof conditionFilterSchema>
+
+/** Berapa bucket jam yang dikirim untuk sparkline. Satu hari penuh. */
+export const HOURLY_BUCKETS = 24
 
 /**
  * `?status=ONLINE&status=OFFLINE` sampai sebagai array, `?status=ONLINE` sebagai
@@ -40,9 +68,13 @@ export const cabinetListQuerySchema = z.object({
   /** Cocokkan kode cabinet, kode cabang, atau nama cabang. Dicari di server. */
   q: z.string().trim().max(100, 'Kata kunci maksimal 100 karakter').default(''),
 
-  status: z.preprocess(asStringArray, z.array(cabinetStatusSchema).max(3)).optional(),
+  status: z.preprocess(asStringArray, z.array(conditionFilterSchema).max(5)).optional(),
 
-  sort: z.enum(SORT_KEYS).default('swaps24h'),
+  // Bawaan berubah dari `swaps24h` ke `severity` (§12.1 nomor 2): mengurutkan
+  // menurut kesibukan mengangkat cabinet paling SEHAT ke puncak, sehingga yang
+  // bermasalah justru tersebar ke halaman dua. `?sort=swaps24h` tetap sah, jadi
+  // URL lama yang menyebutkannya secara eksplisit tidak berubah perilaku.
+  sort: z.enum(SORT_KEYS).default('severity'),
   dir: z.enum(SORT_DIRECTIONS).default('desc'),
 
   // Batas atas halaman itu disengaja: OFFSET yang besar membuat Postgres tetap
@@ -113,6 +145,27 @@ export type CabinetListItem = {
   lastHeartbeatAt: string | null
   /** Heartbeat lebih tua dari ambang basi. Selalu false kalau belum pernah lapor. */
   isStale: boolean
+  /**
+   * State tiap slot fisik, SUDAH DIURUTKAN FULL → CHARGING → FAULT → LOCKED →
+   * EMPTY — bukan menurut nomor slot.
+   *
+   * Diurutkan supaya bentuknya terbaca konsisten antar baris: mata memindai
+   * kolom ini sebagai satu grafik batang, dan urutan fisik akan membuat tiap
+   * baris terlihat acak. Nomor slot fisik tetap dipakai di halaman detail, di
+   * mana teknisi memang butuh "nomor di layar = nomor di pintu" (§12.7).
+   *
+   * Panjangnya mengikuti `slotsTotal`, bukan 12 mati — ECGO bisa memasang
+   * cabinet 8 atau 16 slot (README §7.10).
+   */
+  slotStates: SlotState[]
+  /**
+   * Swap BERHASIL per jam untuk 24 bucket terakhir, paling lama di indeks 0.
+   *
+   * Dipakai sparkline di kolom "Swap 24 jam". Dihitung di database bersama
+   * agregat lain dalam query yang sama — satu CTE tambahan, nol round-trip
+   * tambahan.
+   */
+  hourly: number[]
 }
 
 export type PageMeta = {
@@ -179,8 +232,19 @@ export type FleetSummary = {
   maintenance: number
   /** Bukan ONLINE, atau ONLINE tapi basi, atau belum pernah melapor. */
   needsAttention: number
+  /**
+   * ONLINE tapi heartbeat-nya lewat ambang, ATAU belum pernah melapor sama
+   * sekali. Dikirim eksplisit, tidak lagi disimpulkan client dari
+   * `needsAttention - offline - maintenance`: begitu chip "0 slot siap" ikut
+   * dihitung, pengurangan itu berhenti benar karena kondisinya bertumpang tindih.
+   */
+  stale: number
+  /** Cabinet tanpa satu pun slot siap ditukar — rider datang, tidak bisa swap. */
+  noReadySlots: number
   swaps24h: number
   failed24h: number
+  /** Swap berhasil per jam, 24 bucket, paling lama di indeks 0. Untuk sparkline armada. */
+  hourly: number[]
 }
 
 export type FleetSummaryResponse = { data: FleetSummary }

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import {
+  CABINET_STATUSES,
   cabinetCodeParamSchema,
   cabinetListQuerySchema,
   cabinetStatusPatchSchema,
@@ -41,9 +42,12 @@ type ListRow = {
   slots_filled: number
   slots_ready: number
   slots_total: number
+  slot_states: CabinetListItem['slotStates']
+  hourly: number[]
   swaps_24h: number
   last_heartbeat_at: Date | null
   is_stale: boolean
+  severity: number
   total_count: number
 }
 
@@ -65,8 +69,18 @@ cabinetsRouter.get('/', async (req, res) => {
 
   const offset = (page - 1) * pageSize
   const search = q ? `%${escapeLikePattern(q)}%` : null
-  const statuses = status && status.length > 0 ? status : null
   const direction = dir === 'asc' ? sql`ASC` : sql`DESC`
+
+  // `status` sekarang bisa memuat DUA jenis nilai: status yang tersimpan di
+  // kolom enum, dan kondisi yang harus dihitung dari agregat slot/heartbeat.
+  // Keduanya dipisah di sini karena `= ANY(...::cabinet_status[])` akan
+  // meledak begitu 'STALE_HEARTBEAT' ikut masuk ke dalam array itu.
+  const selected = status && status.length > 0 ? status : null
+  const plainStatuses = selected?.filter((s): s is (typeof CABINET_STATUSES)[number] =>
+    (CABINET_STATUSES as readonly string[]).includes(s),
+  )
+  const wantsStale = selected?.includes('STALE_HEARTBEAT') ?? false
+  const wantsNoReady = selected?.includes('NO_READY_SLOTS') ?? false
 
   // Predikat dibangun sekali dan dipakai ulang, supaya query halaman dan query
   // hitung-cadangan di bawah tidak mungkin menyaring dengan aturan berbeda.
@@ -76,7 +90,58 @@ cabinetsRouter.get('/', async (req, res) => {
         OR b.code ILIKE ${search} ESCAPE '\\')`
     : sql`true`
 
-  const statusClause = statuses ? sql`c.status = ANY(${statuses}::cabinet_status[])` : sql`true`
+  /**
+   * Predikat "basi", didefinisikan SEKALI dan dipakai tiga tempat: skor
+   * keparahan, filter STALE_HEARTBEAT, dan kolom `is_stale`. Ambangnya dari
+   * `ECGO_STALE_MINUTES`, bukan angka mati — handoff menulis 15 menit, tapi
+   * aplikasi ini sudah punya ambangnya sendiri (default 10) dan dua sumber
+   * kebenaran untuk "basi" adalah cara termurah membuat UI berbohong.
+   */
+  const staleExpr = sql`(
+    e.last_heartbeat_at IS NOT NULL
+    AND e.last_heartbeat_at < now() - make_interval(mins => ${staleMinutes()})
+  )`
+
+  /**
+   * Filter kondisi, di-OR seperti yang diminta handoff ("Multiple active values
+   * OR together"). Diterapkan SETELAH join agregat, karena dua di antaranya
+   * bergantung pada jumlah slot siap — yang belum ada saat baris cabinet-nya
+   * sendiri baru diambil.
+   */
+  const conditionClauses = [
+    plainStatuses?.length ? sql`e.status = ANY(${plainStatuses}::cabinet_status[])` : null,
+    // Mencakup DUA cabang CASE berkeparahan 2: yang mengaku online tapi diam,
+    // DAN yang belum pernah melapor sama sekali. Keduanya masalah heartbeat,
+    // dan menghitungnya berbeda dari `/api/summary` membuat chip menampilkan
+    // angka yang tidak sama dengan jumlah baris yang dihasilkannya — persis
+    // tebak-tebakan yang redesign ini ada untuk menghapus.
+    wantsStale
+      ? sql`(e.last_heartbeat_at IS NULL OR (e.status = 'ONLINE' AND ${staleExpr}))`
+      : null,
+    wantsNoReady ? sql`e.slots_ready = 0` : null,
+  ].filter((c) => c !== null)
+
+  const conditionClause = conditionClauses.length
+    ? conditionClauses.reduce((acc, clause) => sql`${acc} OR ${clause}`)
+    : sql`true`
+
+  /**
+   * Skor keparahan — satu-satunya definisi urutan "paling bermasalah".
+   *
+   * Harus sama persis dengan `deriveCondition()` di `src/utils/condition.ts`,
+   * yang menuliskan frasa untuk baris yang sama. Kalau keduanya menyimpang,
+   * tabel terurut menurut satu aturan sambil mencetak aturan lain di kolom
+   * Kondisi, dan yang terlihat rusak adalah datanya.
+   */
+  const severityExpr = sql`
+    CASE
+      WHEN e.status = 'OFFLINE'                       THEN 3
+      WHEN e.slots_ready = 0                          THEN 3
+      WHEN e.last_heartbeat_at IS NULL                THEN 2
+      WHEN e.status = 'ONLINE' AND ${staleExpr}       THEN 2
+      WHEN e.status = 'MAINTENANCE'                   THEN 1
+      ELSE 0
+    END`
 
   // Ruang lingkup datang dari SESI, tidak pernah dari query string. Inilah
   // perbedaan antara endpoint ini dan kode C2 yang saya review: di sana `branch`
@@ -91,27 +156,37 @@ cabinetsRouter.get('/', async (req, res) => {
   // OFFSET akan menampilkan baris yang sama dua kali di halaman berbeda sambil
   // menyembunyikan yang lain.
   const orderBy = {
-    swaps24h: sql`swaps_24h ${direction}, f.code ASC`,
-    code: sql`f.code ${direction}`,
+    // Bawaan. Paling parah dulu, lalu yang tersibuk di antara yang sama parah —
+    // dua cabinet offline diurutkan oleh berapa banyak rider yang terdampak.
+    severity: sql`severity ${direction}, swaps_24h DESC, code ASC`,
+    swaps24h: sql`swaps_24h ${direction}, code ASC`,
+    code: sql`code ${direction}`,
     // NULLS LAST di kedua arah: cabinet yang belum pernah melapor bukan cabinet
     // "paling lama tidak terlihat", jadi tidak boleh memuncaki daftar itu.
-    lastHeartbeat: sql`f.last_heartbeat_at ${direction} NULLS LAST, f.code ASC`,
+    lastHeartbeat: sql`last_heartbeat_at ${direction} NULLS LAST, code ASC`,
   }[sort]
 
-  const rows = await sql<ListRow[]>`
-    WITH filtered AS (
+  /**
+   * Bagian query yang dipakai ULANG oleh hitung-cadangan di bawah.
+   *
+   * Pencarian dan ruang lingkup disaring lebih awal (di `scoped`) supaya
+   * agregatnya tidak menyapu cabang yang memang tidak boleh dilihat. Filter
+   * KONDISI sengaja tidak ikut di situ: dua di antaranya membaca `slots_ready`,
+   * yang baru ada setelah agregat di-join — dan karena semua nilai `status`
+   * di-OR jadi satu, tidak boleh ada yang diterapkan di lapisan berbeda.
+   */
+  const enriched = sql`
+    WITH scoped AS (
       SELECT c.id, c.code, c.status, c.last_heartbeat_at,
              b.code AS branch_code, b.name AS branch_name
       FROM cabinets c
       JOIN branches b ON b.id = c.branch_id
-      WHERE ${searchClause} AND ${statusClause} AND ${scopeClause}
+      WHERE ${searchClause} AND ${scopeClause}
     ),
-    -- Dibatasi ke cabinet yang lolos filter, bukan seluruh armada: kalau ops
-    -- menyaring ke satu cabang, agregatnya tidak ikut menyapu yang lain.
     swap_counts AS (
       SELECT s.cabinet_id, count(*)::int AS swaps_24h
       FROM swap_transactions s
-      JOIN filtered f ON f.id = s.cabinet_id
+      JOIN scoped f ON f.id = s.cabinet_id
       -- Rolling 24 jam, bukan sejak tengah malam. Alasannya di README §Asumsi.
       WHERE s.occurred_at >= now() - interval '24 hours'
         -- Hanya yang berhasil: ini kolom throughput. Cabinet yang menolak 40
@@ -119,29 +194,74 @@ cabinetsRouter.get('/', async (req, res) => {
         AND s.status = 'SUCCESS'
       GROUP BY s.cabinet_id
     ),
+    -- Jumlah DAN susunan state slot dari satu kali pindai yang sama.
     slot_counts AS (
       SELECT sl.cabinet_id,
              count(*)::int                                 AS slots_total,
              count(sl.battery_id)::int                     AS slots_filled,
-             count(*) FILTER (WHERE sl.state = 'FULL')::int AS slots_ready
+             count(*) FILTER (WHERE sl.state = 'FULL')::int AS slots_ready,
+             -- Diurutkan menurut state, bukan nomor slot: kolom ini dibaca
+             -- sebagai bentuk, dan urutan fisik membuat tiap baris tampak acak.
+             -- Nomor fisik tetap dipakai halaman detail (§12.7).
+             array_agg(
+               sl.state::text
+               ORDER BY CASE sl.state
+                          WHEN 'FULL'     THEN 0
+                          WHEN 'CHARGING' THEN 1
+                          WHEN 'FAULT'    THEN 2
+                          WHEN 'LOCKED'   THEN 3
+                          ELSE 4
+                        END,
+                        sl.slot_no
+             ) AS slot_states
       FROM slots sl
-      JOIN filtered f ON f.id = sl.cabinet_id
+      JOIN scoped f ON f.id = sl.cabinet_id
       GROUP BY sl.cabinet_id
+    ),
+    -- 24 bucket jam per cabinet untuk sparkline. Set-based, bukan subquery
+    -- terkorelasi: cross join 50×24 sekali, lalu satu array_agg. Tetap nol
+    -- round-trip tambahan, dan tanpa bentuk N+1 yang tersembunyi di dalam SQL.
+    hourly_counts AS (
+      SELECT s.cabinet_id,
+             23 - floor(extract(epoch FROM (now() - s.occurred_at)) / 3600)::int AS idx,
+             count(*)::int AS n
+      FROM swap_transactions s
+      JOIN scoped f ON f.id = s.cabinet_id
+      WHERE s.occurred_at >= now() - interval '24 hours'
+        AND s.status = 'SUCCESS'
+      GROUP BY 1, 2
+    ),
+    hourly_arrays AS (
+      SELECT f.id AS cabinet_id,
+             array_agg(coalesce(hc.n, 0) ORDER BY g.i) AS hourly
+      FROM scoped f
+      CROSS JOIN generate_series(0, 23) AS g(i)
+      LEFT JOIN hourly_counts hc ON hc.cabinet_id = f.id AND hc.idx = g.i
+      GROUP BY f.id
+    ),
+    enriched AS (
+      SELECT
+        s.code, s.branch_code, s.branch_name, s.status, s.last_heartbeat_at,
+        coalesce(sc.swaps_24h, 0)     AS swaps_24h,
+        coalesce(slc.slots_total, 0)  AS slots_total,
+        coalesce(slc.slots_filled, 0) AS slots_filled,
+        coalesce(slc.slots_ready, 0)  AS slots_ready,
+        coalesce(slc.slot_states, ARRAY[]::text[]) AS slot_states,
+        coalesce(ha.hourly, ARRAY[]::int[])        AS hourly
+      FROM scoped s
+      LEFT JOIN swap_counts sc   ON sc.cabinet_id  = s.id
+      LEFT JOIN slot_counts slc  ON slc.cabinet_id = s.id
+      LEFT JOIN hourly_arrays ha ON ha.cabinet_id  = s.id
     )
-    SELECT
-      f.code, f.branch_code, f.branch_name, f.status, f.last_heartbeat_at,
-      coalesce(sc.swaps_24h, 0)     AS swaps_24h,
-      coalesce(slc.slots_total, 0)  AS slots_total,
-      coalesce(slc.slots_filled, 0) AS slots_filled,
-      coalesce(slc.slots_ready, 0)  AS slots_ready,
-      (
-        f.last_heartbeat_at IS NOT NULL
-        AND f.last_heartbeat_at < now() - make_interval(mins => ${staleMinutes()})
-      ) AS is_stale,
-      count(*) OVER ()::int AS total_count
-    FROM filtered f
-    LEFT JOIN swap_counts sc  ON sc.cabinet_id  = f.id
-    LEFT JOIN slot_counts slc ON slc.cabinet_id = f.id
+    SELECT e.*, ${staleExpr} AS is_stale, ${severityExpr} AS severity
+    FROM enriched e
+    WHERE ${conditionClause}
+  `
+
+  const rows = await sql<ListRow[]>`
+    WITH page AS (${enriched})
+    SELECT *, count(*) OVER ()::int AS total_count
+    FROM page
     ORDER BY ${orderBy}
     LIMIT ${pageSize} OFFSET ${offset}
   `
@@ -157,11 +277,12 @@ cabinetsRouter.get('/', async (req, res) => {
   const total =
     rows[0]?.total_count ??
     (
+      // Memakai ULANG `enriched` apa adanya, bukan menyalin predikatnya. Salinan
+      // adalah tempat kedua yang harus ikut berubah setiap kali filternya
+      // berubah — dan tempat kedua itulah yang akan terlupa.
       await sql<{ total: number }[]>`
-        SELECT count(*)::int AS total
-        FROM cabinets c
-        JOIN branches b ON b.id = c.branch_id
-        WHERE ${searchClause} AND ${statusClause} AND ${scopeClause}
+        WITH page AS (${enriched})
+        SELECT count(*)::int AS total FROM page
       `
     )[0]!.total
 
@@ -178,6 +299,8 @@ cabinetsRouter.get('/', async (req, res) => {
         swaps24h: row.swaps_24h,
         lastHeartbeatAt: row.last_heartbeat_at?.toISOString() ?? null,
         isStale: row.is_stale,
+        slotStates: row.slot_states,
+        hourly: row.hourly,
       }),
     ),
     meta: { page, pageSize, total, totalPages: Math.max(1, Math.ceil(total / pageSize)) },
