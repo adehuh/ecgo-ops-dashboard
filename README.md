@@ -12,7 +12,7 @@ Kandidat: **Ade Rusmana** · adeforgaming@gmail.com
 | Tanggal selesai | 11 Agustus 2026 |
 | AI tool yang dipakai | Claude Code (Opus) — rincian per bagian di §10 |
 | Repo | https://github.com/adehuh/ecgo-ops-dashboard |
-| Ketersediaan Live Defense | **Kamis, 13 Agustus 2026, pukul 10.00 WIB** |
+| Ketersediaan Live Defense | **Jumat, 14 Agustus 2026, pukul 14.00 WIB** |
 
 ---
 
