@@ -42,6 +42,15 @@ export function useApi<T>(
   async function execute(): Promise<void> {
     const target = toValue(url)
 
+    // URL kosong berarti "belum ada yang perlu diambil" — dipakai pemanggil yang
+    // pengambilannya bersyarat (mis. daftar saudara di halaman detail, yang
+    // hanya relevan kalau ops datang dari daftar). Tanpa penjaga ini, fetch('')
+    // akan meminta dokumen SPA-nya sendiri dan gagal mem-parse-nya sebagai JSON.
+    if (!target) {
+      status.value = 'idle'
+      return
+    }
+
     controller?.abort()
     controller = new AbortController()
 

@@ -189,7 +189,25 @@ export type CabinetSlot = {
 export type HourlyBucket = {
   /** Awal jam dalam WIB, ISO-8601 tanpa offset (mis. "2026-08-10T07:00:00"). */
   hourStart: string
-  count: number
+  /** Swap BERHASIL pada jam ini. */
+  success: number
+  /**
+   * Swap GAGAL pada jam ini.
+   *
+   * Sebelumnya grafik hanya menggambar yang berhasil (§7.2), jadi cabinet yang
+   * menolak 40 rider terlihat SEPI — bukan rusak. Ditumpuk merah di atas batang
+   * berhasil supaya kegagalan tidak lagi tak terlihat.
+   */
+  failed: number
+  /**
+   * Median swap berhasil pada jam yang SAMA selama 7 hari sebelumnya.
+   *
+   * Dua puluh empat batang sendirian tidak bisa menjawab "ini normal atau
+   * tidak" — 12 swap pukul 3 pagi luar biasa ramai, 12 swap pukul 8 pagi
+   * berarti ada yang rusak. Median (bukan rata-rata) supaya satu hari libur
+   * atau satu hari mati total tidak menggeser garis dasarnya.
+   */
+  median7d: number
 }
 
 export type RecentSwap = {
@@ -218,6 +236,13 @@ export type CabinetDetail = {
   swaps24h: number
   /** Swap gagal pada rentang yang sama — konteks yang hilang kalau hanya throughput yang ditampilkan. */
   failed24h: number
+  /**
+   * Rider UNIK yang dilayani dalam 24 jam.
+   *
+   * Bukan jumlah swap: satu rider yang menukar empat kali adalah satu orang yang
+   * dilayani. Menghitungnya empat kali membuat cabinet sepi terlihat ramai.
+   */
+  riders24h: number
   slots: CabinetSlot[]
   hourly: HourlyBucket[]
   recentSwaps: RecentSwap[]

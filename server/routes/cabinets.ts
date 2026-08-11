@@ -319,6 +319,7 @@ type CabinetRow = {
   is_stale: boolean
   swaps_24h: number
   failed_24h: number
+  riders_24h: number
 }
 
 type SlotRow = {
@@ -329,7 +330,7 @@ type SlotRow = {
   updated_at: Date
 }
 
-type HourRow = { hour_start: string; count: number }
+type HourRow = { hour_start: string; success: number; failed: number; median7d: number }
 
 type SwapRow = {
   id: string
@@ -391,7 +392,16 @@ cabinetsRouter.get('/:code', async (req, res) => {
           WHERE s.cabinet_id = c.id
             AND s.occurred_at >= now() - interval '24 hours'
             AND s.status = 'FAILED'
-        ) AS failed_24h
+        ) AS failed_24h,
+        -- Rider UNIK, bukan jumlah swap: satu rider yang menukar empat kali
+        -- adalah satu orang yang dilayani, dan angka jangkauan yang menghitungnya
+        -- empat kali akan membuat cabinet sepi terlihat ramai.
+        (
+          SELECT count(DISTINCT s.rider_ref)::int FROM swap_transactions s
+          WHERE s.cabinet_id = c.id
+            AND s.occurred_at >= now() - interval '24 hours'
+            AND s.status = 'SUCCESS'
+        ) AS riders_24h
       FROM cabinets c
       JOIN branches b ON b.id = c.branch_id
       WHERE c.code = ${code} AND ${scopeClause}
@@ -410,29 +420,61 @@ cabinetsRouter.get('/:code', async (req, res) => {
     // gap-filling diserahkan ke client, jam sepi akan menyusut hilang dan
     // grafiknya diam-diam berbohong tentang bentuk hari itu.
     sql<HourRow[]>`
-      WITH bounds AS (
+      WITH target AS (
+        SELECT c.id FROM cabinets c WHERE c.code = ${code} AND ${scopeClause}
+      ),
+      bounds AS (
         SELECT date_trunc('hour', now() AT TIME ZONE 'Asia/Jakarta') AS latest
       ),
       hours AS (
         SELECT generate_series(b.latest - interval '23 hours', b.latest, interval '1 hour') AS hour_start
         FROM bounds b
+      ),
+      -- Dua puluh empat jam terakhir, berhasil DAN gagal dalam satu pemindaian.
+      recent AS (
+        SELECT date_trunc('hour', s.occurred_at AT TIME ZONE 'Asia/Jakarta') AS hour_start,
+               count(*) FILTER (WHERE s.status = 'SUCCESS')::int AS success,
+               count(*) FILTER (WHERE s.status = 'FAILED')::int  AS failed
+        FROM swap_transactions s
+        JOIN target t ON t.id = s.cabinet_id
+        -- Predikat rentang inilah yang membuat index (cabinet_id, occurred_at)
+        -- terpakai; date_trunc tidak sargable dan sendirian akan memaksa
+        -- pemindaian seluruh 30 hari riwayat cabinet ini.
+        WHERE s.occurred_at >= now() - interval '24 hours'
+        GROUP BY 1
+      ),
+      -- Garis dasar: jumlah per jam pada 7 hari SEBELUM jendela 24 jam itu,
+      -- supaya hari ini tidak ikut menghitung mediannya sendiri.
+      baseline_daily AS (
+        SELECT extract(hour FROM s.occurred_at AT TIME ZONE 'Asia/Jakarta')::int AS hour_of_day,
+               date_trunc('day', s.occurred_at AT TIME ZONE 'Asia/Jakarta')      AS day,
+               count(*)::int                                                     AS n
+        FROM swap_transactions s
+        JOIN target t ON t.id = s.cabinet_id
+        WHERE s.occurred_at >= now() - interval '8 days'
+          AND s.occurred_at <  now() - interval '24 hours'
+          AND s.status = 'SUCCESS'
+        GROUP BY 1, 2
+      ),
+      -- Median, bukan rata-rata: satu hari libur atau satu hari mati total tidak
+      -- boleh menggeser garis dasar yang dipakai menilai "normal atau tidak".
+      baseline AS (
+        SELECT hour_of_day,
+               percentile_cont(0.5) WITHIN GROUP (ORDER BY n) AS median7d
+        FROM baseline_daily
+        GROUP BY hour_of_day
       )
       SELECT
         -- Dikirim sebagai teks jam-dinding WIB. Mengirimnya sebagai timestamp
         -- tanpa zona akan diparse ulang sebagai UTC oleh driver dan menggeser
         -- seluruh grafik tujuh jam.
-        to_char(h.hour_start, 'YYYY-MM-DD"T"HH24:MI:SS') AS hour_start,
-        count(s.id)::int AS count
+        to_char(h.hour_start, 'YYYY-MM-DD"T"HH24:MI:SS')        AS hour_start,
+        coalesce(r.success, 0)                                  AS success,
+        coalesce(r.failed, 0)                                   AS failed,
+        coalesce(round(b.median7d), 0)::int                     AS median7d
       FROM hours h
-      LEFT JOIN swap_transactions s
-        ON s.cabinet_id = (SELECT c.id FROM cabinets c WHERE c.code = ${code} AND ${scopeClause})
-        -- Predikat rentang ini yang membuat index (cabinet_id, occurred_at)
-        -- terpakai; date_trunc di bawah tidak sargable dan sendirian akan
-        -- memaksa pemindaian seluruh 30 hari riwayat cabinet ini.
-       AND s.occurred_at >= now() - interval '24 hours'
-       AND s.status = 'SUCCESS'
-       AND date_trunc('hour', s.occurred_at AT TIME ZONE 'Asia/Jakarta') = h.hour_start
-      GROUP BY h.hour_start
+      LEFT JOIN recent r   ON r.hour_start = h.hour_start
+      LEFT JOIN baseline b ON b.hour_of_day = extract(hour FROM h.hour_start)::int
       ORDER BY h.hour_start
     `,
 
@@ -470,6 +512,7 @@ cabinetsRouter.get('/:code', async (req, res) => {
       installedAt: cabinet.installed_at.toISOString(),
       swaps24h: cabinet.swaps_24h,
       failed24h: cabinet.failed_24h,
+      riders24h: cabinet.riders_24h,
 
       slots: slotRows.map(
         (row): CabinetSlot => ({
@@ -481,7 +524,14 @@ cabinetsRouter.get('/:code', async (req, res) => {
         }),
       ),
 
-      hourly: hourRows.map((row): HourlyBucket => ({ hourStart: row.hour_start, count: row.count })),
+      hourly: hourRows.map(
+        (row): HourlyBucket => ({
+          hourStart: row.hour_start,
+          success: row.success,
+          failed: row.failed,
+          median7d: row.median7d,
+        }),
+      ),
 
       recentSwaps: swapRows.map(
         (row): RecentSwap => ({

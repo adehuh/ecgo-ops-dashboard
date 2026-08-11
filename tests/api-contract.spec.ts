@@ -171,8 +171,22 @@ describe.skipIf(!serverIsUp)('GET /api/cabinets/:code', () => {
     const { hourly } = body.data
 
     expect(hourly).toHaveLength(24)
+
     // Gap-filling dilakukan di SQL; jam sepi harus muncul sebagai 0, bukan hilang.
-    expect(hourly.every((h) => Number.isInteger(h.count) && h.count >= 0)).toBe(true)
+    // Ketiga seri ikut diperiksa: sejak §12.8 tiap bucket membawa juga kegagalan
+    // dan garis dasar median, dan grafik bertumpuk akan salah gambar kalau salah
+    // satunya pernah undefined.
+    for (const h of hourly) {
+      for (const [field, value] of Object.entries({
+        success: h.success,
+        failed: h.failed,
+        median7d: h.median7d,
+      })) {
+        expect(Number.isInteger(value), `${field} bilangan bulat`).toBe(true)
+        expect(value, `${field} tidak negatif`).toBeGreaterThanOrEqual(0)
+      }
+    }
+
     const timestamps = hourly.map((h) => h.hourStart)
     expect(timestamps).toEqual([...timestamps].sort())
   })
