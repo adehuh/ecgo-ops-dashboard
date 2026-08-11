@@ -64,10 +64,10 @@ const summarise = (r: Result): string => {
 
 const tone = (r: Result) =>
   r.status === 'VALID'
-    ? 'border-ok/40 bg-ok/10 text-ok'
+    ? 'border-ok/45 bg-ok/14 text-ok'
     : r.status === 'OUT_OF_RANGE'
-      ? 'border-warn/40 bg-warn/10 text-warn'
-      : 'border-danger/40 bg-danger/10 text-danger'
+      ? 'border-warn/45 bg-warn/14 text-warn-tint'
+      : 'border-danger/45 bg-danger/16 text-danger-tint'
 
 const apply = (c: (typeof CASES)[number]) => {
   lat.value = c.lat

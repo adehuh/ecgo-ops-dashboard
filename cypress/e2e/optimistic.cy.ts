@@ -13,7 +13,7 @@ describe('Optimistic UI: tandai perawatan', () => {
   beforeEach(() => {
     cy.masuk()
     cy.visit('/cabinets?status=ONLINE')
-    cy.get('table tbody tr td:first-child a')
+    cy.get('table tbody tr td:nth-child(2) a')
       .first()
       .then(($a) => {
         kode = $a.text().trim()
@@ -82,7 +82,7 @@ describe('Optimistic UI: tandai perawatan', () => {
     // Status OFFLINE dilaporkan perangkat; ia tidak pulih karena seseorang
     // mengeklik tombol. Jadi tombolnya memang tidak ada, bukan ada lalu ditolak.
     cy.visit('/cabinets?status=OFFLINE')
-    cy.get('table tbody tr td:first-child a').first().click()
+    cy.get('table tbody tr td:nth-child(2) a').first().click()
     cy.contains('span', 'Offline').should('be.visible')
     cy.get('[data-cy=toggle-maintenance]').should('not.exist')
   })

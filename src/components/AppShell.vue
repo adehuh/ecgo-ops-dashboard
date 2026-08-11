@@ -48,7 +48,7 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
     <header
       class="sticky top-0 z-30 border-b border-border bg-bg/85 backdrop-blur supports-[backdrop-filter]:bg-bg/70"
     >
-      <div class="mx-auto flex h-16 max-w-[88rem] items-center gap-4 px-4 sm:px-6">
+      <div class="mx-auto flex h-[60px] max-w-[88rem] items-center gap-4 px-4 sm:px-6">
         <RouterLink to="/cabinets" class="flex shrink-0 items-center gap-2.5" aria-label="ECGO Ops — beranda">
           <img
             src="/brand/ecgo-logo-white.png"
@@ -80,12 +80,27 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
         </nav>
 
         <div class="ml-auto flex items-center gap-2">
+          <!-- Sasaran teleport, bukan komponen yang dipasang mati di sini.
+               Kesegaran data adalah milik halaman yang melakukan polling, dan
+               AppShell juga dipakai halaman yang tidak polling sama sekali
+               (geofence) — memasangnya di sini akan membuat header berbohong.
+               Halamannya berada di dalam <RouterView>, jadi ia keturunan
+               AppShell, bukan pengisi slot-nya; teleport adalah jalan Vue untuk
+               itu tanpa menaikkan state polling ke App.vue. -->
+          <div id="app-header-status" class="flex items-center" />
+
           <!-- Ruang lingkup ditampilkan terus-menerus, bukan disembunyikan di
                balik menu. Supervisor yang lupa bahwa ia hanya melihat dua cabang
                akan salah membaca setiap angka di layar ini sebagai angka armada. -->
-          <div v-if="auth.user" class="hidden text-right leading-tight sm:block">
-            <p class="text-sm font-medium">{{ auth.user.name }}</p>
-            <p class="text-xs text-faint">{{ auth.scopeLabel }}</p>
+          <div v-if="auth.user" class="hidden text-right leading-[1.3] sm:block">
+            <p class="text-[13px] font-medium">{{ auth.user.name }}</p>
+            <p class="text-[11px] text-faint">
+              {{ auth.scopeLabel }}
+              <!-- Ukuran armada ditempel oleh halaman yang memang sudah
+                   memuatnya, supaya AppShell tidak ikut memanggil /api/summary
+                   di rute yang tidak membutuhkannya. -->
+              <span id="app-header-scope" />
+            </p>
           </div>
 
           <button
@@ -149,11 +164,17 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
       </div>
     </header>
 
-    <main id="main" class="mx-auto w-full max-w-[88rem] flex-1 px-4 py-6 sm:px-6 sm:py-8">
+    <main id="main" class="mx-auto w-full max-w-[88rem] flex-1 px-4 py-6 sm:px-5 sm:py-7">
       <slot />
     </main>
 
-    <footer class="mx-auto w-full max-w-[88rem] px-4 pt-6 pb-10 text-xs text-faint sm:px-6">
+    <!-- Catatan zona waktu pindah ke baris petunjuk keyboard di halaman daftar,
+         tempat ia berada di prototipe. Rute lain masih menampilkannya di sini
+         supaya tidak ada halaman yang kehilangan keterangan itu sama sekali. -->
+    <footer
+      v-if="!isActive('/cabinets')"
+      class="mx-auto w-full max-w-[88rem] px-4 pt-6 pb-10 text-xs text-faint sm:px-6"
+    >
       Dashboard operasional internal · data ditampilkan dalam zona waktu WIB (Asia/Jakarta)
     </footer>
   </div>

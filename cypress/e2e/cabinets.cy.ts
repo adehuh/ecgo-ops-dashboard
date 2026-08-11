@@ -8,10 +8,30 @@ describe('Halaman daftar cabinet', () => {
     cy.get('table tbody tr').should('exist')
   })
 
-  it('menampilkan enam kolom yang diminta soal', () => {
-    for (const kolom of ['Kode', 'Cabang', 'Status', 'Slot terisi', 'Swap 24 jam', 'Heartbeat']) {
-      cy.get('table thead').should('contain', kolom)
+  it('menampilkan enam keterangan yang diminta soal', () => {
+    // Soal meminta ENAM KETERANGAN. Redesign §12 menyatukan kode + cabang ke
+    // dalam satu kolom dan mengganti "Status" dengan "Kondisi" yang merupakan
+    // supersetnya (ia menyebut statusnya SEKALIGUS alasannya). Jadi yang diuji
+    // di sini adalah keterangannya, bukan jumlah <th>-nya — kalau salah satu
+    // hilang dari layar, test ini tetap gagal.
+    // Judulnya di-uppercase lewat CSS, jadi teks DOM-nya tetap huruf kecil —
+    // dicocokkan apa adanya, bukan seperti yang terlihat di layar.
+    for (const judul of ['Cabinet', 'Kondisi', '12 slot', 'Swap 24 jam', 'Heartbeat']) {
+      cy.get('table thead').should('contain', judul)
     }
+
+    cy.get('table tbody tr')
+      .first()
+      .within(() => {
+        cy.get('td:nth-child(2)').invoke('text').should('match', /CB-[A-Z]{3}-\d+/) // kode
+        cy.get('td:nth-child(2)').invoke('text').should('match', /[A-Za-z]{3,}/) // nama cabang
+        cy.get('td:nth-child(3)').invoke('text').should('not.be.empty') // kondisi = status + sebabnya
+        // Slot kini 12 segmen + "N siap · M terisi", bukan lagi rasio "8/12".
+        cy.get('td:nth-child(4)').invoke('text').should('match', /\d+ siap · \d+ terisi/)
+        cy.get('td:nth-child(4) span[class*="rounded"]').should('have.length.greaterThan', 1)
+        cy.get('td:nth-child(5)').invoke('text').should('match', /\d/) // swap 24 jam
+        cy.get('td:nth-child(6)').invoke('text').should('not.be.empty') // heartbeat
+      })
   })
 
   it('pencarian dikerjakan server dan tersimpan di URL', () => {
@@ -39,29 +59,73 @@ describe('Halaman daftar cabinet', () => {
     cy.get('@cari.all').should('have.length', 1)
   })
 
-  it('filter status menyaring dan masuk ke URL', () => {
+  it('chip pita kesehatan menyaring dan masuk ke URL', () => {
+    // Chip di pita kesehatan ADALAH filter statusnya sekarang (§12.1 nomor 1).
     cy.contains('button', 'Perawatan').click()
     cy.location('search').should('contain', 'status=MAINTENANCE')
+    cy.get('table tbody tr').should('have.length.greaterThan', 0)
+
+    // Kolom Kondisi menuliskan frasa, bukan enum, dan frasa untuk cabinet
+    // MAINTENANCE tidak selalu berbunyi "Perawatan": kalau slot siapnya 0 ia
+    // naik jadi "0 slot siap ditukar", persis seperti urutan CASE di server.
+    // Yang HARUS benar adalah tidak ada baris sehat yang lolos filter ini.
     cy.get('table tbody tr td:nth-child(3)').each(($sel) => {
-      expect($sel.text()).to.contain('Perawatan')
+      expect($sel.text()).to.not.contain('Online · sehat')
     })
   })
 
+  it('jumlah di chip sama dengan jumlah baris yang dihasilkannya', () => {
+    // Inti dari §12.1 nomor 1: angka 17 yang dulu tidak bisa diklik. Kalau
+    // jumlah di chip berbeda dari jumlah baris hasilnya, chip itu mengembalikan
+    // tebak-tebakan yang justru mau dihapus redesign ini.
+    // Tunggu angkanya benar-benar tiba: selama /api/summary masih terbang, chip
+    // menampilkan em-dash, dan membacanya saat itu menghasilkan 0.
+    cy.contains('button', 'Offline').invoke('text').should('match', /\d/)
+
+    cy.contains('button', 'Offline')
+      .invoke('text')
+      .then((teks) => {
+        const jumlah = Number(teks.replace(/\D/g, ''))
+        expect(jumlah, 'jumlah di chip sudah termuat').to.be.greaterThan(0)
+        cy.contains('button', 'Offline').click()
+        cy.location('search').should('contain', 'status=OFFLINE')
+        // Ditargetkan ke nav pagination, bukan `cy.contains('cabinet')` — kata
+        // itu juga ada di subjudul halaman.
+        cy.get('nav[aria-label="Navigasi halaman"]').should('contain', `dari ${jumlah} cabinet`)
+      })
+  })
+
   it('sortir jumlah swap 24 jam benar-benar mengurutkan', () => {
+    // Bawaannya sekarang "paling bermasalah" (§12.1 nomor 2), jadi urutan swap
+    // harus diminta lebih dulu lewat segmented control-nya.
+    cy.contains('button', 'Swap 24 jam').click()
+    cy.location('search').should('contain', 'sort=swaps24h')
+
     cy.get('table tbody tr td:nth-child(5)').then(($sel) => {
-      const angka = [...$sel].map((el) => Number(el.textContent!.replace(/\D/g, '')))
+      // Sel ini juga memuat sparkline; angkanya diambil dari span pertama saja.
+      const angka = [...$sel].map((el) =>
+        Number(el.querySelector('span')!.textContent!.replace(/\D/g, '')),
+      )
       expect(angka).to.deep.equal([...angka].sort((a, b) => b - a))
     })
   })
 
+  it('sortir bawaan menaruh yang paling bermasalah di atas', () => {
+    // Ini perubahan strukturalnya: yang tersibuk hampir selalu yang tersehat,
+    // jadi mengurutkan menurut kesibukan justru menyembunyikan yang bermasalah.
+    cy.contains('button', 'Paling bermasalah').should('have.attr', 'aria-pressed', 'true')
+
+    cy.get('table tbody tr').first().find('td:nth-child(3)').invoke('text').should('not.contain', 'Online · sehat')
+  })
+
   it('pagination pindah halaman dan tidak mengulang baris yang sama', () => {
-    cy.get('table tbody tr td:first-child').then(($hal1) => {
+    cy.get('table tbody tr td:nth-child(2)').then(($hal1) => {
       const kode1 = [...$hal1].map((el) => el.textContent!.trim())
 
       cy.get('button[aria-label="Halaman 2"]').click()
       cy.location('search').should('contain', 'page=2')
 
-      cy.get('table tbody tr td:first-child').then(($hal2) => {
+      cy.get('table tbody tr td:nth-child(2)').then(($hal2) => {
         const kode2 = [...$hal2].map((el) => el.textContent!.trim())
         expect(kode2.some((k) => kode1.includes(k)), 'tidak ada baris berulang').to.be.false
       })
@@ -72,8 +136,10 @@ describe('Halaman daftar cabinet', () => {
     cy.get('input[type=search]').type('zzzz-tidak-ada')
     cy.contains('Tidak ada cabinet yang cocok').should('be.visible')
 
-    // Jalan keluar, bukan jalan buntu.
-    cy.contains('button', 'Bersihkan filter').click()
+    // Jalan keluar, bukan jalan buntu. Label berubah di redesign: keadaan
+    // kosong kini menawarkan melonggarkan filter satu per satu DAN membersihkan
+    // semuanya, jadi tombolnya tidak bisa lagi bernama "Bersihkan filter" saja.
+    cy.contains('button', 'Bersihkan semua').click()
     cy.location('search').should('be.empty')
     cy.get('table tbody tr').should('have.length', 25)
   })
@@ -83,7 +149,7 @@ describe('Halaman detail cabinet', () => {
   beforeEach(() => {
     cy.masuk()
     cy.visit('/cabinets')
-    cy.get('table tbody tr td:first-child a').first().click()
+    cy.get('table tbody tr td:nth-child(2) a').first().click()
     cy.location('pathname').should('match', /\/cabinets\/CB-/)
   })
 

@@ -46,6 +46,10 @@ const go = (page: number) => {
       Menampilkan <span class="font-medium text-text">{{ formatNumber(from) }}</span>
       –<span class="font-medium text-text">{{ formatNumber(to) }}</span>
       dari <span class="font-medium text-text">{{ formatNumber(meta.total) }}</span> cabinet
+      <!-- Catatan opsional dari pemanggil, mis. "· 17 perlu perhatian ada di
+           halaman ini". Ditempel di sini, bukan baris sendiri, supaya rentang
+           dan peringatannya terbaca sebagai satu kalimat. -->
+      <slot name="note" />
     </p>
 
     <div class="flex items-center gap-1">

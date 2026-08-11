@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import ConditionMarker from '@/components/ConditionMarker.vue'
+import type { ConditionMarker as MarkerShape } from '@/utils/condition'
 import type { CabinetStatus } from '@shared/contracts/cabinets'
 
 /**
@@ -29,12 +31,22 @@ const LABELS = {
   maintenance: 'Perawatan',
 } as const
 
+// Kontras dinaikkan (§12.9): isian 10% → 14–16%, border 30% → 45%. Teks pindah
+// ke token *-tint karena warna dasar di atas isian bertint tidak lolos 4,5:1.
 const CLASSES = {
-  online: 'border-ok/30 bg-ok/10 text-ok',
-  suspect: 'border-warn/35 bg-warn/10 text-warn',
-  offline: 'border-danger/30 bg-danger/10 text-danger',
-  maintenance: 'border-info/30 bg-info/10 text-info',
+  online: 'border-ok/45 bg-ok/14 text-ok',
+  suspect: 'border-warn/45 bg-warn/14 text-warn-tint',
+  offline: 'border-danger/45 bg-danger/16 text-danger-tint',
+  maintenance: 'border-info/40 bg-info/13 text-info-tint',
 } as const
+
+/** Bentuk penanda per nada — kosakata yang sama dengan pil kondisi. */
+const MARKERS: Record<keyof typeof CLASSES, MarkerShape> = {
+  online: 'circle',
+  suspect: 'triangle',
+  offline: 'ring',
+  maintenance: 'square',
+}
 </script>
 
 <template>
@@ -43,12 +55,7 @@ const CLASSES = {
     :class="CLASSES[tone]"
   >
     <!-- Bentuk penanda ikut berbeda, bukan hanya warnanya. -->
-    <svg class="size-2 shrink-0" viewBox="0 0 8 8" aria-hidden="true">
-      <circle v-if="tone === 'online'" cx="4" cy="4" r="4" fill="currentColor" />
-      <path v-else-if="tone === 'suspect'" d="M4 0 8 7H0z" fill="currentColor" />
-      <rect v-else-if="tone === 'maintenance'" x="0" y="0" width="8" height="8" rx="1.5" fill="currentColor" />
-      <circle v-else cx="4" cy="4" r="3" fill="none" stroke="currentColor" stroke-width="2" />
-    </svg>
+    <ConditionMarker :shape="MARKERS[tone]" />
 
     {{ LABELS[tone] }}
     <span v-if="tone === 'suspect'" class="opacity-80">

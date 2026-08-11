@@ -17,12 +17,12 @@ const props = defineProps<{
 const STATES: Record<SlotState, { label: string; classes: string; icon: string }> = {
   FULL: {
     label: 'Penuh',
-    classes: 'border-ok/40 bg-ok/10 text-ok',
+    classes: 'border-ok/45 bg-ok/14 text-ok',
     icon: 'M5 7h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Zm16 3v4',
   },
   CHARGING: {
     label: 'Mengisi',
-    classes: 'border-warn/40 bg-warn/10 text-warn',
+    classes: 'border-warn/45 bg-warn/14 text-warn-tint',
     icon: 'M13 3 5 14h6l-1 7 8-11h-6l1-7Z',
   },
   EMPTY: {
@@ -32,12 +32,12 @@ const STATES: Record<SlotState, { label: string; classes: string; icon: string }
   },
   LOCKED: {
     label: 'Terkunci',
-    classes: 'border-info/40 bg-info/10 text-info',
+    classes: 'border-info/40 bg-info/13 text-info-tint',
     icon: 'M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z',
   },
   FAULT: {
     label: 'Rusak',
-    classes: 'border-danger/45 bg-danger/10 text-danger',
+    classes: 'border-danger/45 bg-danger/16 text-danger-tint',
     icon: 'M12 8v5m0 3.5h.01M10.3 3.9 2.4 17.6A2 2 0 0 0 4.1 20.6h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z',
   },
 }

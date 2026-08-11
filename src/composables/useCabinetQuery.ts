@@ -3,7 +3,7 @@ import { useRoute, useRouter, type LocationQueryRaw } from 'vue-router'
 import {
   cabinetListQuerySchema,
   type CabinetListQuery,
-  type CabinetStatus,
+  type ConditionFilter,
 } from '@shared/contracts/cabinets'
 
 /**
@@ -71,7 +71,11 @@ export function useCabinetQuery() {
     return router.replace({ query })
   }
 
-  function toggleStatus(status: CabinetStatus) {
+  /**
+   * Chip pita kesehatan. Beberapa boleh aktif sekaligus dan di-OR di server —
+   * jadi ini toggle, bukan pilihan tunggal.
+   */
+  function toggleStatus(status: ConditionFilter) {
     const current = state.value.status ?? []
     const next = current.includes(status)
       ? current.filter((s) => s !== status)

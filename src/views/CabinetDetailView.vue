@@ -248,7 +248,7 @@ const backToList = () => router.push('/cabinets')
 
       <p
         v-if="statusError"
-        class="rounded-lg border border-danger/30 bg-danger/10 px-3.5 py-2.5 text-sm text-danger"
+        class="rounded-lg border border-danger/45 bg-danger/16 px-3.5 py-2.5 text-sm text-danger-tint"
         role="alert"
         data-cy="status-error"
       >
@@ -257,7 +257,7 @@ const backToList = () => router.push('/cabinets')
 
       <div
         v-if="staleness"
-        class="flex gap-3 rounded-card border border-warn/30 bg-warn/10 px-4 py-3"
+        class="flex gap-3 rounded-card border border-warn/45 bg-warn/14 px-4 py-3"
         role="status"
       >
         <svg
@@ -353,8 +353,8 @@ const backToList = () => router.push('/cabinets')
                     class="rounded-full border px-2 py-0.5 text-xs font-medium"
                     :class="
                       swap.status === 'SUCCESS'
-                        ? 'border-ok/30 bg-ok/10 text-ok'
-                        : 'border-danger/30 bg-danger/10 text-danger'
+                        ? 'border-ok/45 bg-ok/14 text-ok'
+                        : 'border-danger/45 bg-danger/16 text-danger-tint'
                     "
                   >
                     {{ SWAP_STATUS[swap.status] }}

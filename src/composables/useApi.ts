@@ -25,6 +25,17 @@ export function useApi<T>(
   const error = shallowRef<{ message: string; code: string } | null>(null)
   const status = ref<ApiStatus>('idle')
 
+  /**
+   * Kapan terakhir kali permintaan BERHASIL — bukan kapan terakhir dicoba.
+   *
+   * Bedanya itu yang penting di dashboard yang polling. Kalau yang dilaporkan
+   * adalah percobaan terakhir, layar akan menulis "diperbarui 3 detik lalu"
+   * sementara angkanya sebenarnya dari sepuluh menit lalu karena sepuluh
+   * percobaan terakhir gagal berturut-turut. Mode gagal di layar semacam ini
+   * bukan halaman kosong, melainkan angka basi yang masih terlihat hidup.
+   */
+  const lastSuccessAt = ref<number | null>(null)
+
   let controller: AbortController | undefined
   let requestId = 0
 
@@ -46,6 +57,7 @@ export function useApi<T>(
       data.value = result
       error.value = null
       status.value = 'success'
+      lastSuccessAt.value = Date.now()
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === 'AbortError') return
       if (id !== requestId) return
@@ -69,5 +81,5 @@ export function useApi<T>(
   const isFirstLoad = computed(() => status.value === 'pending' && data.value === null)
   const isRefreshing = computed(() => status.value === 'pending' && data.value !== null)
 
-  return { data, error, status, isFirstLoad, isRefreshing, refresh }
+  return { data, error, status, isFirstLoad, isRefreshing, refresh, lastSuccessAt }
 }
